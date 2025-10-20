@@ -1,9 +1,13 @@
 // src/layout/Sidebar.jsx
-import React from "react";
+import React, { useContext } from "react";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import { NavLink } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 const Sidebar = () => {
+  const { user } = useContext(AuthContext);
+  const role = user?.role?.name || user?.role || "";
+  const canManageUsers = ["president", "general_manager"].includes(role);
   return (
     <aside className="sidebar">
       <ul>
@@ -42,6 +46,19 @@ const Sidebar = () => {
             <i className="bi bi-journal-text"></i> الفتاوى
           </NavLink>
         </li>
+
+        <li>
+          <NavLink to="/reports" className="nav-item">
+            <i className="bi bi-bar-chart"></i> التقارير
+          </NavLink>
+        </li>
+        {canManageUsers && (
+          <li>
+            <NavLink to="/users" className="nav-item">
+              <i className="bi bi-people"></i> المستخدمون
+            </NavLink>
+          </li>
+        )}
       </ul>
     </aside>
   );
