@@ -4,6 +4,12 @@ import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
 import { Home } from "../pages/Home/Home";
 import { Cases } from "../pages/Cases/Cases";
+import InvestigationListPage from "../pages/Investigations/InvestigationListPage";
+import InvestigationDetailPage from "../pages/Investigations/InvestigationDetailPage";
+import InvestigationFormPage from "../pages/Investigations/InvestigationFormPage";
+import AppealListPage from "../pages/Appeals/AppealListPage";
+import AppealDetailPage from "../pages/Appeals/AppealDetailPage";
+import AppealFormPage from "../pages/Appeals/AppealFormPage";
 
 const route = createBrowserRouter([
   {
@@ -28,11 +34,27 @@ const route = createBrowserRouter([
       },
       {
         path: "investigations",
-        element: <div>investigations Page</div>,
+        element: <InvestigationListPage />,
+      },
+      {
+        path: "investigations/new",
+        element: <InvestigationFormPage />,
+      },
+      {
+        path: "investigations/:id",
+        element: <InvestigationDetailPage />,
       },
       {
         path: "appeals",
-        element: <div>appeals Page</div>,
+        element: <AppealListPage />,
+      },
+      {
+        path: "appeals/new",
+        element: <AppealFormPage />,
+      },
+      {
+        path: "appeals/:id",
+        element: <AppealDetailPage />,
       },
       {
         path: "contracts",
@@ -42,8 +64,7 @@ const route = createBrowserRouter([
         path: "fatwas",
         element: <div>fatwas Page</div>,
       },
-      
-],
+    ],
   },
 ]);
 
