@@ -9,24 +9,24 @@ import ContractForm from "../pages/contracts/ContractForm";
 import ContractDetails from "../pages/contracts/ContractDetails";
 import ProtectedRoute from "./ProtectedRoute";
 import Dashboard from "../pages/dashboard/Dashboard";
-import InvestigationsPage from "../pages/investigations/index";
-import AppealsPage from "../pages/appeals/index";
 import FatwasPage from "../pages/fatwas/index";
 import ReportsPage from "../pages/reports/index";
 import Users from "../pages/users/Users";
 import Roles from "../pages/users/Roles";
 import Profile from "../pages/users/Profile";
 
+import InvestigationListPage from "../pages/Investigations/InvestigationListPage";
+import InvestigationDetailPage from "../pages/Investigations/InvestigationDetailPage";
+import InvestigationFormPage from "../pages/Investigations/InvestigationFormPage";
+
+import AppealListPage from "../pages/Appeals/AppealListPage";
+import AppealDetailPage from "../pages/Appeals/AppealDetailPage";
+import AppealFormPage from "../pages/Appeals/AppealFormPage";
+
 const route = createBrowserRouter([
-  {
-    path: "/login",
-    element: <Login />,
-  },
-  {
-    path: "/register",
-    element: <Register />,
-  },
-  // Protected root: all routes below require authentication
+  { path: "/login", element: <Login /> },
+  { path: "/register", element: <Register /> },
+
   {
     element: <ProtectedRoute />,
     children: [
@@ -37,23 +37,39 @@ const route = createBrowserRouter([
           { index: true, element: <Dashboard /> },
           { path: "home", element: <Home /> },
           { path: "cases", element: <Cases /> },
-          { path: "investigations", element: <InvestigationsPage /> },
-          { path: "appeals", element: <AppealsPage /> },
+
+          // Investigations
+          { path: "investigations", element: <InvestigationListPage /> },
+          { path: "investigations/new", element: <InvestigationFormPage /> },
+          { path: "investigations/:id", element: <InvestigationDetailPage /> },
+
+          // Appeals
+          { path: "appeals", element: <AppealListPage /> },
+          { path: "appeals/new", element: <AppealFormPage /> },
+          { path: "appeals/:id", element: <AppealDetailPage /> },
+
+          // Contracts
           { path: "contracts", element: <ContractsList /> },
           { path: "contracts/:id", element: <ContractDetails /> },
-          { path: "fatwas", element: <FatwasPage /> },
-          { path: "reports", element: <ReportsPage /> },
-          { path: "users", element: <Users /> },
-          { path: "roles", element: <Roles /> },
-          { path: "profile", element: <Profile /> },
-          // Role-restricted routes (president/general_manager/department_manager)
+
+          // Restricted routes
           {
-            element: <ProtectedRoute allowedRoles={["president", "general_manager", "department_manager"]} />,
+            element: (
+              <ProtectedRoute
+                allowedRoles={["president", "general_manager", "department_manager"]}
+              />
+            ),
             children: [
               { path: "contracts/new", element: <ContractForm /> },
               { path: "contracts/:id/edit", element: <ContractForm /> },
             ],
           },
+
+          { path: "fatwas", element: <FatwasPage /> },
+          { path: "reports", element: <ReportsPage /> },
+          { path: "users", element: <Users /> },
+          { path: "roles", element: <Roles /> },
+          { path: "profile", element: <Profile /> },
         ],
       },
     ],
@@ -61,29 +77,3 @@ const route = createBrowserRouter([
 ]);
 
 export default route;
-
-//  <NavLink to="/cases" className="nav-item">
-//             <i className="bi bi-briefcase"></i> القضايا
-//           </NavLink>
-//         </li>
-
-//         <li>
-//           <NavLink to="/investigations" className="nav-item">
-//             <i className="bi bi-search"></i> التحقيقات
-//           </NavLink>
-//         </li>
-
-//         <li>
-//           <NavLink to="/appeals" className="nav-item">
-//             <i className="bi bi-exclamation-circle"></i> التظلمات
-//           </NavLink>
-//         </li>
-
-//         <li>
-//           <NavLink to="/contracts" className="nav-item">
-//             <i className="bi bi-file-earmark-text"></i> العقود
-//           </NavLink>
-//         </li>
-
-//         <li>
-//           <NavLink to="/fatwas" className="nav-item"></NavLink>
