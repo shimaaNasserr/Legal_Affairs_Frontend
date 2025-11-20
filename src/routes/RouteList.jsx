@@ -3,7 +3,8 @@ import DashboardLayout from "../layout/DashboardLayout";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import { Home } from "../pages/Home/Home";
-import { Cases } from "../pages/Cases/Cases";
+import Cases from "../pages/Cases/Cases";
+import AddCaseForm from "../pages/Cases/AddCaseForm";
 import ContractsList from "../pages/contracts/ContractsList";
 import ContractForm from "../pages/contracts/ContractForm";
 import ContractDetails from "../pages/contracts/ContractDetails";
@@ -37,6 +38,7 @@ const route = createBrowserRouter([
           { index: true, element: <Dashboard /> },
           { path: "home", element: <Home /> },
           { path: "cases", element: <Cases /> },
+          { path: "cases/add/form", element: <AddCaseForm /> },
 
           // Investigations
           { path: "investigations", element: <InvestigationListPage /> },
@@ -65,6 +67,7 @@ const route = createBrowserRouter([
             ],
           },
 
+          // Other pages
           { path: "fatwas", element: <FatwasPage /> },
           { path: "reports", element: <ReportsPage /> },
           { path: "users", element: <Users /> },
@@ -72,6 +75,14 @@ const route = createBrowserRouter([
           { path: "profile", element: <Profile /> },
         ],
       },
+
+      // Fallback routes
+      { path: "cases", element: <Cases /> },
+      { path: "cases/add/form", element: <AddCaseForm /> },
+      { path: "investigations", element: <div>investigations Page</div> },
+      { path: "appeals", element: <div>appeals Page</div> },
+      { path: "contracts", element: <div>contracts Page</div> },
+      { path: "fatwas", element: <div>fatwas Page</div> },
     ],
   },
 ]);
