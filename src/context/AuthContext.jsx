@@ -4,13 +4,20 @@ export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(localStorage.getItem("access") || null);
+  const [accessToken, setAccessToken] = useState(null);
+  const [loading, setLoading] = useState(true); // 👈 مهم جداً
 
   useEffect(() => {
-    if (accessToken) {
-      setUser(JSON.parse(localStorage.getItem("user")));
+    const storedToken = localStorage.getItem("access");
+    const storedUser = localStorage.getItem("user");
+
+    if (storedToken && storedUser) {
+      setAccessToken(storedToken);
+      setUser(JSON.parse(storedUser));
     }
-  }, [accessToken]);
+
+    setLoading(false); // 👈 خلّيه يعلن إن التحميل خلص
+  }, []);
 
   const login = (token, userData) => {
     localStorage.setItem("access", token);
@@ -27,7 +34,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, login, logout }}>
+    <AuthContext.Provider value={{ user, accessToken, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
