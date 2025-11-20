@@ -3,7 +3,8 @@ import DashboardLayout from "../layout/DashboardLayout";
 import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
 import { Home } from "../pages/Home/Home";
-import { Cases } from "../pages/Cases/Cases";
+import Cases from "../pages/Cases/Cases";
+import AddCaseForm from "../pages/Cases/AddCaseForm";
 
 const route = createBrowserRouter([
   {
@@ -25,6 +26,11 @@ const route = createBrowserRouter([
       {
         path: "cases",
         element: <Cases />,
+      },
+
+      {
+        path: "cases/add/form",
+        element: <AddCaseForm />,
       },
       {
         path: "investigations",

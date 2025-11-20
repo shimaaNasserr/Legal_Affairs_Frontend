@@ -1,0 +1,22 @@
+.courts-grid,
+.divisions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.court-card {
+  padding: 20px;
+  background-color: #36454f;
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.court-card:hover {
+  background-color: #304771;
+}
