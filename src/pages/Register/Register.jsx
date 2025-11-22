@@ -150,7 +150,7 @@ export default function Register() {
               </label>
               <div className="input-wrapper">
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type="password"
                   name="password"
                   className="myform-control"
                   placeholder="أدخل كلمة المرور"
