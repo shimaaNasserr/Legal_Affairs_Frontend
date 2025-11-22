@@ -2,7 +2,7 @@ import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
-// import "./Login.css";
+import "./Register.css";
 
 export default function Register() {
   const { login } = useContext(AuthContext);
@@ -16,7 +16,7 @@ export default function Register() {
     password: "",
   });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false); 
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -25,7 +25,7 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true); 
+    setLoading(true);
 
     try {
       const res = await axiosInstance.post("accounts/register/", formData);
@@ -35,106 +35,153 @@ export default function Register() {
       console.error(err);
       setError("حدث خطأ أثناء التسجيل، حاول مرة أخرى");
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
   return (
     <div className="login-page">
-      <div className="login-container">
-        <div className="login-icon">
-          <svg
-            viewBox="0 0 64 64"
-            width="70"
-            height="70"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="32" cy="32" r="30" fill="#304771" />
-            <g fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-              <line x1="32" y1="15" x2="32" y2="45" />
-              <line x1="22" y1="45" x2="42" y2="45" />
-              <line x1="20" y1="20" x2="44" y2="20" />
-              <line x1="24" y1="20" x2="20" y2="30" />
-              <line x1="40" y1="20" x2="44" y2="30" />
-              <ellipse cx="20" cy="32" rx="5" ry="2" stroke="white" fill="none" />
-              <ellipse cx="44" cy="32" rx="5" ry="2" stroke="white" fill="none" />
-            </g>
-          </svg>
+      {/* Left Side - Image with Overlay */}
+      <div className="login-image-section">
+        <div className="login-image-content">
+          <div className="login-image-icon">
+            <i className="ri-user-add-fill"></i>
+          </div>
+          <h1>إدارة الشؤون القانونية</h1>
+          <p>
+            نظام شامل ومتكامل لإدارة القضايا والتحقيقات والتظلمات والعقود والفتاوى
+            <br />
+            جامعة بورسعيد
+          </p>
         </div>
+      </div>
 
-        <h2 className="login-title">إنشاء حساب جديد</h2>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <input
-              type="text"
-              name="username"
-              className="myform-control"
-              placeholder="اسم المستخدم"
-              value={formData.username}
-              onChange={handleChange}
-              required
-            />
+      {/* Right Side - Register Form */}
+      <div className="login-form-section">
+        <div className="login-container">
+          {/* University Logo */}
+          <div className="university-logo">
+            <img src="/portsaidU.png" alt="جامعة بورسعيد" />
           </div>
 
-          <div className="form-group">
-            <input
-              type="email"
-              name="email"
-              className="myform-control"
-              placeholder="البريد الإلكتروني"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
+          <div className="login-header">
+            <h2>إنشاء حساب جديد</h2>
+            <p>يرجى إدخال بياناتك لإنشاء حساب جديد في النظام</p>
           </div>
 
-          <div className="form-group">
-            <input
-              type="text"
-              name="first_name"
-              className="myform-control"
-              placeholder="الاسم الأول"
-              value={formData.first_name}
-              onChange={handleChange}
-              required
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
+              <label>
+                اسم المستخدم <span className="required">*</span>
+              </label>
+              <div className="input-wrapper">
+                <i className="ri-user-line"></i>
+                <input
+                  type="text"
+                  name="username"
+                  className="myform-control"
+                  placeholder="أدخل اسم المستخدم"
+                  value={formData.username}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
 
-          <div className="form-group">
-            <input
-              type="text"
-              name="last_name"
-              className="myform-control"
-              placeholder="اسم العائلة"
-              value={formData.last_name}
-              onChange={handleChange}
-              required
-            />
-          </div>
+            <div className="form-group">
+              <label>
+                البريد الإلكتروني <span className="required">*</span>
+              </label>
+              <div className="input-wrapper">
+                <i className="ri-mail-line"></i>
+                <input
+                  type="email"
+                  name="email"
+                  className="myform-control"
+                  placeholder="أدخل بريدك الإلكتروني"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
 
-          <div className="form-group">
-            <input
-              type="password"
-              name="password"
-              className="myform-control"
-              placeholder="كلمة المرور"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>
+                  الاسم الأول <span className="required">*</span>
+                </label>
+                <div className="input-wrapper">
+                  <i className="ri-user-3-line"></i>
+                  <input
+                    type="text"
+                    name="first_name"
+                    className="myform-control"
+                    placeholder="الاسم الأول"
+                    value={formData.first_name}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
 
-          <button type="submit" className="mybtn login-btn btn-block" disabled={loading}>
-            {loading ? (
-              <span className="spinner"></span> 
-            ) : (
-              "إنشاء الحساب"
+              <div className="form-group">
+                <label>
+                  اسم العائلة <span className="required">*</span>
+                </label>
+                <div className="input-wrapper">
+                  <i className="ri-user-3-line"></i>
+                  <input
+                    type="text"
+                    name="last_name"
+                    className="myform-control"
+                    placeholder="اسم العائلة"
+                    value={formData.last_name}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>
+                كلمة المرور <span className="required">*</span>
+              </label>
+              <div className="input-wrapper">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  className="myform-control"
+                  placeholder="أدخل كلمة المرور"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onFocus={() => setShowPassword(true)}
+                  onBlur={() => setShowPassword(false)}
+                  required
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? (
+                <span className="spinner-border" role="status" aria-hidden="true"></span>
+              ) : (
+                <>
+                  <i className="ri-user-add-line"></i>
+                  <span>إنشاء الحساب</span>
+                </>
+              )}
+            </button>
+
+            {error && (
+              <div className="error-message">
+                <i className="ri-error-warning-line"></i>
+                <span>{error}</span>
+              </div>
             )}
-          </button>
-
-          {error && <p className="error-message">{error}</p>}
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

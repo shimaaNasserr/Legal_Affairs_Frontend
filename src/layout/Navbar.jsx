@@ -1,33 +1,62 @@
 // src/layout/Navbar.jsx
-import React from "react";
-import "bootstrap-icons/font/bootstrap-icons.css";
+import React, { useContext, useState } from "react";
 import "./layout.css";
+import { AuthContext } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
-const Navbar = () => {
+const Navbar = ({ onMenuToggle }) => {
+  const { user, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  const getRoleName = (role) => {
+    const roleNames = {
+      President: "رئيس الجامعة",
+      GeneralManager: "مدير عام",
+      DepartmentManager: "مدير إدارة",
+      Lawyer: "محامي",
+      Secretary: "سكرتير",
+    };
+    return roleNames[role] || role;
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-left">
-        <i className="bi bi-balance-scale logo"></i>
-        <span className="app-name"><svg
-            viewBox="0 0 64 64"
-            width="70"
-            height="70"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <g fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-              <line x1="32" y1="15" x2="32" y2="45" />
-              <line x1="22" y1="45" x2="42" y2="45" />
-              <line x1="20" y1="20" x2="44" y2="20" />
-              <line x1="24" y1="20" x2="20" y2="30" />
-              <line x1="40" y1="20" x2="44" y2="30" />
-              <ellipse cx="20" cy="32" rx="5" ry="2" stroke="white" fill="none" />
-              <ellipse cx="44" cy="32" rx="5" ry="2" stroke="white" fill="none" />
-            </g>
-          </svg>إدارة الشؤون القانونية </span>
+        <button className="mobile-menu-toggle" onClick={onMenuToggle}>
+          <i className="ri-menu-line"></i>
+        </button>
+        <div className="logo">
+          <i className="ri-scales-3-line"></i>
+        </div>
+        <span className="app-name">
+          <span>إدارة الشؤون القانونية</span>
+          <span style={{fontSize: '0.75rem', opacity: 0.8, fontWeight: 400}}>جامعة بورسعيد</span>
+        </span>
       </div>
       <div className="navbar-right">
-        <i className="bi bi-bell"></i>
-        <i className="bi bi-person-circle"></i>
+        <div className="notification-icon">
+          <i className="ri-notification-3-line"></i>
+        </div>
+        {user && (
+          <div className="user-info">
+            <span className="user-name">
+              {user.first_name} {user.last_name}
+            </span>
+            <span className="user-role">{getRoleName(user.role)}</span>
+          </div>
+        )}
+        <div className="profile-icon">
+          <i className="ri-user-3-line"></i>
+        </div>
+        <button onClick={handleLogout} className="logout-btn">
+          <i className="ri-logout-box-r-line"></i>
+          <span className="logout-text">تسجيل الخروج</span>
+        </button>
       </div>
     </nav>
   );

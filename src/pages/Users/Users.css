@@ -1,0 +1,60 @@
+/* Users Page - Premium Modern Design */
+@import '../../styles/global.css';
+
+.users-page {
+  padding: 0;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.users-table-container {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table thead {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  color: var(--text-inverse);
+}
+
+.users-table th {
+  padding: 1.25rem 1.5rem;
+  text-align: right;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.users-table tbody tr {
+  border-bottom: 1px solid var(--bg-tertiary);
+  transition: all var(--transition-fast);
+}
+
+.users-table tbody tr:hover {
+  background: var(--bg-tertiary);
+}
+
+.users-table td {
+  padding: 1.25rem 1.5rem;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+}
+
+/* Responsive Tables */
+@media (max-width: 768px) {
+  .users-table-container {
+    overflow-x: auto;
+  }
+  
+  .users-table {
+    min-width: 800px;
+  }
+}
