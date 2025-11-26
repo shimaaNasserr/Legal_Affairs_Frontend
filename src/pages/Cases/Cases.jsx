@@ -114,13 +114,14 @@ const Cases = () => {
           </div>
         ) : (
           filteredCases.map((c) => {
-            const courtDisplay = c.division_name
-              ? `${c.court_name} - ${c.division_name}`
-              : c.court_name;
 
-            const courtAndDepartment = c.department?.name
-              ? `${courtDisplay} (${c.department.name})`
-              : courtDisplay;
+          const courtDisplay = c.division_name
+            ? `${c.court_name} - ${c.division_name}`
+            : c.court_name;
+
+          const courtAndDepartment = c.department?.name
+            ? `${courtDisplay} (${c.department.name})`
+            : courtDisplay;
 
 
             return (
@@ -136,7 +137,7 @@ const Cases = () => {
                   <div><strong>رقم القضية:</strong> {c.case_number}</div>
                   <div><strong>رقم الحصر العام:</strong> {c.general_number}</div>
                   <div><strong>رقم الدعوى:</strong> {c.lawsuit_number}</div>
-                  <div><strong>المحكمة:</strong>{c.court_full_name}</div>                  
+                  <div><strong>المحكمة:</strong>{courtAndDepartment}</div>                  
                   <div><strong>تاريخ ورود الدعوى:</strong> {c.date_received}</div>
                   <div><strong>موقف الطعن:</strong> {c.appeal_status === null ? "غير محدد" : (c.appeal_status === true || c.appeal_status === "true") ? "تم الطعن" : "لم يتم الطعن"}</div>
                 </div>

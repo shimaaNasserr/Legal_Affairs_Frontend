@@ -26,9 +26,7 @@ export default function CaseDetails() {
             <div><strong>رقم الحصر العام:</strong> {caseItem.general_number}</div>
             <div><strong>رقم حصر القضايا:</strong> {caseItem.case_number}</div>
             <div><strong>رقم الدعوى والسنة القضائية:</strong> {caseItem.lawsuit_number}</div>
-            <div>
-            <strong>المحكمة:</strong>{caseItem.court_full_name}</div>
-
+            <div><strong>المحكمة:</strong> {caseItem.division_name ? `${caseItem.court_name} - ${caseItem.division_name}` : caseItem.court_name}</div>
 
 
             <div><strong>اسم المدعي:</strong> {caseItem.plaintiff}</div>
