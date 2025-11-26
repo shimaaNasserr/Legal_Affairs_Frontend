@@ -4,6 +4,9 @@ import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
 import { Home } from "../pages/Home/Home";
 import Cases from "../pages/Cases/Cases";
+import SelectCourt from "../pages/Courts/SelectCourt";
+import AddCaseForm from "../pages/Cases/AddCaseForm";
+import CaseDetails from "../pages/Cases/CaseDetails";
 import Investigations from "../pages/Investigations/Investigations";
 import Appeals from "../pages/Appeals/Appeals";
 import Contracts from "../pages/Contracts/Contracts";
@@ -56,6 +59,22 @@ const route = createBrowserRouter([
       {
         path: "cases",
         element: <Cases />,
+      },
+      {
+        path: "select-court" ,
+        element: <SelectCourt />,
+      },
+      {
+        path: "cases/:id",
+        element: <CaseDetails />,
+      },
+      {
+        path: "cases/:id/edit",
+        element: <AddCaseForm />,
+      },
+      {
+        path: "add-case/:courtId/:courtName",
+        element: <AddCaseForm />,
       },
       {
         path: "investigations",
