@@ -4,32 +4,38 @@ import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import { Home } from "../pages/Home/Home";
 import Cases from "../pages/Cases/Cases";
+import SelectCourt from "../pages/Courts/SelectCourt";
 import AddCaseForm from "../pages/Cases/AddCaseForm";
-import ContractsList from "../pages/contracts/ContractsList";
-import ContractForm from "../pages/contracts/ContractForm";
-import ContractDetails from "../pages/contracts/ContractDetails";
-import ProtectedRoute from "./ProtectedRoute";
-import Dashboard from "../pages/dashboard/Dashboard";
-import FatwasPage from "../pages/fatwas/index";
-import ReportsPage from "../pages/reports/index";
-import Users from "../pages/users/Users";
-import Roles from "../pages/users/Roles";
-import Profile from "../pages/users/Profile";
-
-import InvestigationListPage from "../pages/Investigations/InvestigationListPage";
-import InvestigationDetailPage from "../pages/Investigations/InvestigationDetailPage";
-import InvestigationFormPage from "../pages/Investigations/InvestigationFormPage";
-
-import AppealListPage from "../pages/Appeals/AppealListPage";
-import AppealDetailPage from "../pages/Appeals/AppealDetailPage";
-import AppealFormPage from "../pages/Appeals/AppealFormPage";
+import CaseDetails from "../pages/Cases/CaseDetails";
+import Investigations from "../pages/Investigations/Investigations";
+import Appeals from "../pages/Appeals/Appeals";
+import Contracts from "../pages/Contracts/Contracts";
+import Fatwas from "../pages/Fatwas/Fatwas";
+import Reports from "../pages/Reports/Reports";
+import Users from "../pages/Users/Users";
+import Profile from "../pages/Profile/Profile";
+import ProtectedRoute from "../components/ProtectedRoute";
+import { ROLES } from "../utils/roles";
 
 const route = createBrowserRouter([
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
 
   {
-    element: <ProtectedRoute />,
+    path: "/login",
+    element: <Login />,
+  },
+  {
+    path: "/register",
+    element: <Register />,
+  },
+  {
+    path: "/",
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         path: "/",
@@ -75,14 +81,70 @@ const route = createBrowserRouter([
           { path: "profile", element: <Profile /> },
         ],
       },
-
-      // Fallback routes
-      { path: "cases", element: <Cases /> },
-      { path: "cases/add/form", element: <AddCaseForm /> },
-      { path: "investigations", element: <div>investigations Page</div> },
-      { path: "appeals", element: <div>appeals Page</div> },
-      { path: "contracts", element: <div>contracts Page</div> },
-      { path: "fatwas", element: <div>fatwas Page</div> },
+      {
+        path: "users",
+        element: (
+          <ProtectedRoute
+            allowedRoles={[ROLES.PRESIDENT, ROLES.GENERAL_MANAGER]}
+          >
+            <Users />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "profile",
+        element: (
+          <ProtectedRoute allowedRoles={[ROLES.LAWYER]}>
+            <Profile />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "cases",
+        element: <Cases />,
+      },
+      {
+        path: "select-court" ,
+        element: <SelectCourt />,
+      },
+      {
+        path: "cases/:id",
+        element: <CaseDetails />,
+      },
+      {
+        path: "cases/:id/edit",
+        element: <AddCaseForm />,
+      },
+      {
+        path: "add-case/:courtId/:courtName",
+        element: <AddCaseForm />,
+      },
+      {
+        path: "investigations",
+        element: <Investigations />,
+      },
+      {
+        path: "appeals",
+        element: <Appeals />,
+      },
+      {
+        path: "contracts",
+        element: <Contracts />,
+      },
+      {
+        path: "fatwas",
+        element: <Fatwas />,
+      },
+      {
+        path: "reports",
+        element: (
+          <ProtectedRoute
+            allowedRoles={[ROLES.PRESIDENT, ROLES.GENERAL_MANAGER]}
+          >
+            <Reports />
+          </ProtectedRoute>
+        ),
+      },
     ],
   },
 ]);

@@ -10,7 +10,7 @@ export default function Login() {
 
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);  
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -19,7 +19,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true);  
+    setLoading(true);
 
     try {
       const res = await axiosInstance.post("accounts/login/", formData);
@@ -29,71 +29,103 @@ export default function Login() {
 
     } catch (err) {
       console.error(err);
-      setError("Invalid email or password");
+      setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
   return (
     <div className="login-page">
-      <div className="login-container">
-        <div className="login-icon">
-          <svg
-            viewBox="0 0 64 64"
-            width="70"
-            height="70"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <g fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-              <line x1="32" y1="15" x2="32" y2="45" />
-              <line x1="22" y1="45" x2="42" y2="45" />
-              <line x1="20" y1="20" x2="44" y2="20" />
-              <line x1="24" y1="20" x2="20" y2="30" />
-              <line x1="40" y1="20" x2="44" y2="30" />
-              <ellipse cx="20" cy="32" rx="5" ry="2" stroke="white" fill="none" />
-              <ellipse cx="44" cy="32" rx="5" ry="2" stroke="white" fill="none" />
-            </g>
-          </svg>
+      {/* Left Side - Image with Overlay */}
+      <div className="login-image-section">
+        <div className="login-image-content">
+          <div className="login-image-icon">
+            <i className="ri-scales-3-fill"></i>
+          </div>
+          <h1>إدارة الشؤون القانونية</h1>
+          <p>
+            نظام شامل ومتكامل لإدارة القضايا والتحقيقات والتظلمات والعقود والفتاوى
+            <br />
+            جامعة بورسعيد
+          </p>
         </div>
+      </div>
 
-        <h2 className="login-title">إدارة الشؤون القانونية</h2>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <input
-              type="email"
-              name="email"
-              className="myform-control"
-              placeholder="البريد الإلكتروني"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
+      {/* Right Side - Login Form */}
+      <div className="login-form-section">
+        <div className="login-container">
+          {/* University Logo */}
+          <div className="university-logo">
+            <img src="/portsaidU.png" alt="جامعة بورسعيد" />
           </div>
 
-          <div className="form-group">
-            <input
-              type="password"
-              name="password"
-              className="myform-control"
-              placeholder="كلمة المرور"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
+          <div className="login-header">
+            <h2>مرحباً بعودتك!</h2>
+            <p>يرجى إدخال بياناتك للدخول إلى النظام</p>
           </div>
 
-          <button type="submit" className="mybtn login-btn btn-block" disabled={loading}>
-            {loading ?     <span
-      className="spinner-border spinner-border-sm"
-      role="status"
-      aria-hidden="true"
-    ></span> : "تسجيل الدخول"}
-          </button>
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
+              <label>
+                البريد الإلكتروني <span className="required">*</span>
+              </label>
+              <div className="input-wrapper">
+                <i className="ri-mail-line"></i>
+                <input
+                  type="email"
+                  name="email"
+                  className="myform-control"
+                  placeholder="أدخل بريدك الإلكتروني"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
 
-          {error && <p className="error-message">{error}</p>}
-        </form>
+            <div className="form-group">
+              <label>
+                كلمة المرور <span className="required">*</span>
+              </label>
+              <div className="input-wrapper">
+                <input
+                  type="password"
+                  name="password"
+                  className="myform-control"
+                  placeholder="أدخل كلمة المرور"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="forgot-password">
+              <a href="#" onClick={(e) => { e.preventDefault(); }}>
+                نسيت كلمة المرور؟
+              </a>
+            </div>
+
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? (
+                <span className="spinner-border" role="status" aria-hidden="true"></span>
+              ) : (
+                <>
+                  <i className="ri-login-box-line"></i>
+                  <span>تسجيل الدخول</span>
+                </>
+              )}
+            </button>
+
+            {error && (
+              <div className="error-message">
+                <i className="ri-error-warning-line"></i>
+                <span>{error}</span>
+              </div>
+            )}
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,58 @@
+/* Appeals Page - Premium Modern Design */
+@import '../../styles/global.css';
+
+.appeals-page {
+  padding: 0;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.appeals-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.appeal-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.appeal-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--error) 0%, #dc2626 100%);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.appeal-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--error);
+}
+
+.appeal-card:hover::before {
+  opacity: 0.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .appeals-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .appeal-card {
+    padding: 1.5rem;
+  }
+}

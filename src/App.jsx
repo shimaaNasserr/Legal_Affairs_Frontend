@@ -1,8 +1,6 @@
 import { RouterProvider } from "react-router-dom";
 import route from "./routes/RouteList";
-import "@fortawesome/fontawesome-free/css/all.min.css";
-import "bootstrap/dist/css/bootstrap.min.css"
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import "./styles/global.css";
 import "./App.css";
 import DashboardLayout from "./layout/DashboardLayout";
 

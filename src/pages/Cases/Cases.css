@@ -1,0 +1,547 @@
+/* Cases Page - Premium Modern Design */
+@import '../../styles/global.css';
+
+.cases-page {
+  padding: 0;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.cases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.case-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.case-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.case-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-color);
+}
+
+.case-card:hover::before {
+  opacity: 0.6;
+}
+
+.case-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--bg-tertiary);
+}
+
+.case-card-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.case-card-body {
+  margin-bottom: 1rem;
+}
+
+.case-description {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 1.25rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.9375rem;
+}
+
+.case-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.detail-item i {
+  color: var(--primary-color);
+  width: 20px;
+  font-size: 1.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.case-card-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 1rem;
+  border-top: 2px solid var(--bg-tertiary);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .cases-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .cases-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .case-card {
+    padding: 1.5rem;
+  }
+}
+
+/* Modern Case Form - Clean Design */
+.case-form {
+  background: var(--bg-secondary);
+  border: 2px solid var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  max-width: 720px;
+  margin: 2rem auto;
+  font-family: 'Tajawal', sans-serif;
+  transition: all var(--transition-base);
+}
+
+.case-form:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-color);
+}
+
+.case-form h3 {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: var(--text-primary);
+}
+
+.case-form .form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.case-form .form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.case-form label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.case-form input,
+.case-form select,
+.case-form textarea {
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--bg-tertiary);
+  background: var(--bg-primary);
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  transition: all 0.3s;
+}
+
+.case-form input:focus,
+.case-form select:focus,
+.case-form textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+.case-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.case-form .radio-group {
+  display: flex;
+  gap: 2rem;
+  margin-top: 0.5rem;
+}
+
+.case-form .radio-group input[type="radio"] {
+  accent-color: var(--primary-color);
+}
+
+.case-form .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.case-form .btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.case-form .btn-primary {
+  background-color: var(--primary-color);
+  color: #fff;
+  border: none;
+}
+
+.case-form .btn-primary:hover {
+  background-color: var(--secondary-color);
+}
+
+.case-form .btn-secondary {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--bg-tertiary);
+}
+
+.case-form .btn-secondary:hover {
+  background-color: var(--bg-primary);
+}
+
+.case-form .alert {
+  padding: 0.75rem 1rem;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-radius: var(--radius-md);
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .case-form {
+    padding: 1.5rem;
+  }
+
+  .case-form .form-row {
+    flex-direction: column;
+  }
+}
+
+.appeal-alert {
+  background-color: #fffae5;
+  border-left: 5px solid #ffb200;
+  color: #663c00;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+/* Modern Case Form - Aligned with Cases Page */
+.case-form {
+  background: var(--bg-secondary);
+  border: 2px solid var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+  padding: 2.5rem 2rem;
+  max-width: 720px;
+  margin: 2rem auto;
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-family); 
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.case-form:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-color);
+}
+
+.case-form h3 {
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 2.5rem;
+  color: var(--text-primary);
+}
+
+.case-form label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.case-form input,
+.case-form select,
+.case-form textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--bg-tertiary);
+  background: var(--bg-primary);
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.case-form input:focus,
+.case-form select:focus,
+.case-form textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.case-form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.group-title {
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+  color: var(--primary-color);
+  font-size: 1.1rem;
+}
+
+
+/* Modern Radio Group */
+.case-form .radio-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6rem;   /* قللتها شوية تبقى أنضف */
+  margin: 1rem 0 1.5rem;
+}
+
+/* كل اختيار */
+.case-form .radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;   /* <<< المسافة بين الدايرة والكلمة */
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  user-select: none;
+}
+
+/* نخفي الراديو الأصلي */
+.case-form .radio-group input[type="radio"] {
+  display: none;
+}
+
+/* الدائرة الخارجية */
+.case-form .radio-group label span::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--primary-color);
+  border-radius: 50%;
+  display: inline-block;
+  transition: all 0.25s ease;
+  background: white;
+}
+
+/* عند التحديد */
+.case-form .radio-group input[type="radio"]:checked + span::before {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.25);
+}
+
+/* Hover على العنصر */
+.case-form .radio-group label:hover span::before {
+  border-color: var(--secondary-color);
+  transform: scale(1.1);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.7rem 1.5rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: #fff;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: var(--secondary-color);
+}
+
+.btn-secondary {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--bg-tertiary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-primary);
+}
+
+.appeal-alert {
+  background-color: #fff4e5;
+  border-left: 5px solid #ff9500;
+  color: #663c00;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .case-form {
+    padding: 1.8rem 1.5rem;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .radio-group {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+
+/* Cases.css - إضافات لصفحة التفاصيل */
+.case-details-page {
+  max-width: 900px;
+  margin: 20px auto;
+  font-family: "Cairo", sans-serif; /* نفس الخط اللي بنستخدمه */
+  color: #333;
+  padding: 20px;
+}
+
+.case-details-page h2 {
+  margin-bottom: 20px;
+  color: #244b7e;
+  font-weight: 600;
+}
+
+.case-card {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 20px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.case-card-body div {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.case-card-body div:last-child {
+  border-bottom: none;
+}
+
+.case-card-body strong {
+  color: #555;
+}
+
+.case-details-page a {
+  color: #1a73e8;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.case-details-page a:hover {
+  text-decoration: underline;
+}
+
+.btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background-color: #1a73e8;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #1666c1;
+}
+
+.case-department {
+  font-size: 0.9rem;
+  color: #555;
+  margin-left: 5px;
+}
+
+@media (max-width: 600px) {
+  .modal-actions button {
+    width: 100%;
+  }
+}
