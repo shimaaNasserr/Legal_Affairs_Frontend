@@ -1,7 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
-import Login from "../pages/auth/Login";
-import Register from "../pages/auth/Register";
+import Login from "../pages/Login/Login";
+import Register from "../pages/Register/Register";
 import { Home } from "../pages/Home/Home";
 import Cases from "../pages/Cases/Cases";
 import SelectCourt from "../pages/Courts/SelectCourt";
@@ -18,9 +18,6 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import { ROLES } from "../utils/roles";
 
 const route = createBrowserRouter([
-  { path: "/login", element: <Login /> },
-  { path: "/register", element: <Register /> },
-
   {
     path: "/login",
     element: <Login />,
@@ -38,48 +35,8 @@ const route = createBrowserRouter([
     ),
     children: [
       {
-        path: "/",
-        element: <DashboardLayout />,
-        children: [
-          { index: true, element: <Dashboard /> },
-          { path: "home", element: <Home /> },
-          { path: "cases", element: <Cases /> },
-          { path: "cases/add/form", element: <AddCaseForm /> },
-
-          // Investigations
-          { path: "investigations", element: <InvestigationListPage /> },
-          { path: "investigations/new", element: <InvestigationFormPage /> },
-          { path: "investigations/:id", element: <InvestigationDetailPage /> },
-
-          // Appeals
-          { path: "appeals", element: <AppealListPage /> },
-          { path: "appeals/new", element: <AppealFormPage /> },
-          { path: "appeals/:id", element: <AppealDetailPage /> },
-
-          // Contracts
-          { path: "contracts", element: <ContractsList /> },
-          { path: "contracts/:id", element: <ContractDetails /> },
-
-          // Restricted routes
-          {
-            element: (
-              <ProtectedRoute
-                allowedRoles={["president", "general_manager", "department_manager"]}
-              />
-            ),
-            children: [
-              { path: "contracts/new", element: <ContractForm /> },
-              { path: "contracts/:id/edit", element: <ContractForm /> },
-            ],
-          },
-
-          // Other pages
-          { path: "fatwas", element: <FatwasPage /> },
-          { path: "reports", element: <ReportsPage /> },
-          { path: "users", element: <Users /> },
-          { path: "roles", element: <Roles /> },
-          { path: "profile", element: <Profile /> },
-        ],
+        index: true,
+        element: <Home />,
       },
       {
         path: "users",
@@ -104,7 +61,7 @@ const route = createBrowserRouter([
         element: <Cases />,
       },
       {
-        path: "select-court" ,
+        path: "select-court",
         element: <SelectCourt />,
       },
       {
@@ -150,3 +107,29 @@ const route = createBrowserRouter([
 ]);
 
 export default route;
+
+//  <NavLink to="/cases" className="nav-item">
+//             <i className="bi bi-briefcase"></i> القضايا
+//           </NavLink>
+//         </li>
+
+//         <li>
+//           <NavLink to="/investigations" className="nav-item">
+//             <i className="bi bi-search"></i> التحقيقات
+//           </NavLink>
+//         </li>
+
+//         <li>
+//           <NavLink to="/appeals" className="nav-item">
+//             <i className="bi bi-exclamation-circle"></i> التظلمات
+//           </NavLink>
+//         </li>
+
+//         <li>
+//           <NavLink to="/contracts" className="nav-item">
+//             <i className="bi bi-file-earmark-text"></i> العقود
+//           </NavLink>
+//         </li>
+
+//         <li>
+//           <NavLink to="/fatwas" className="nav-item"></NavLink>

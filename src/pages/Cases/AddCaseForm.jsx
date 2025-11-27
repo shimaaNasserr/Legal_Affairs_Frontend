@@ -1,76 +1,3 @@
-<<<<<<< HEAD
-// src/pages/Cases/AddCaseForm.jsx
-import React, { useState } from "react";
-import axiosInstance from "../../apis/axiosInstance";
-import "./caseStyles.css";
-
-export default function AddCaseForm({ selectedCourt, onCaseAdded }) {
-  const [formData, setFormData] = useState({
-    date_received: "",
-    case_number: "",
-    lawsuit_number: "",
-    court: selectedCourt?.id || "",
-    plaintiff: "",
-    defendant: "",
-    requests: "",
-    hearing_date: "",
-    verdict: "",
-    appeal_status: "", // اختياري
-    date_saved: "",
-    notes: "",
-    file: null, // اختياري
-  });
-
-  const handleChange = (e) => {
-    const { name, value, type, files } = e.target;
-    if (type === "file") {
-      setFormData({ ...formData, [name]: files[0] || null });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // تحقق من الحقول المطلوبة الأساسية
-    const requiredFields = ["date_received", "case_number", "lawsuit_number", "plaintiff", "defendant"];
-    for (const field of requiredFields) {
-      if (!formData[field]) {
-        alert(`الرجاء ملء الحقل: ${field}`);
-        return;
-      }
-    }
-
-    const dataToSend = new FormData();
-    dataToSend.append("date_received", formData.date_received);
-    dataToSend.append("case_number", formData.case_number);
-    dataToSend.append("lawsuit_number", formData.lawsuit_number);
-    dataToSend.append("court", selectedCourt.id);
-    dataToSend.append("plaintiff", formData.plaintiff);
-    dataToSend.append("defendant", formData.defendant);
-    dataToSend.append("requests", formData.requests);
-    dataToSend.append("hearing_dates", formData.hearing_date ? formData.hearing_date.toString() : "");
-    dataToSend.append("verdict", formData.verdict);
-    dataToSend.append("appeal_status", formData.appeal_status === "" ? null : formData.appeal_status); // اختياري
-    dataToSend.append("date_saved", formData.date_saved);
-    dataToSend.append("notes", formData.notes);
-    if (formData.file) dataToSend.append("file", formData.file); // اختياري
-
-    try {
-      const res = await axiosInstance.post("/cases/", dataToSend);
-      alert("تم إضافة القضية بنجاح");
-      if (onCaseAdded) onCaseAdded(res.data);
-    } catch (err) {
-      console.error("Error adding case: ", err);
-      alert("حدث خطأ أثناء إضافة القضية. تأكدي من ملء جميع الحقول المطلوبة.");
-    }
-  };
-
-  return (
-    <div className="add-case-container">
-      <h2 className="title">إضافة قضية جديدة</h2>
-=======
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import axiosInstance from "../../apis/axiosInstance";
@@ -97,7 +24,9 @@ export default function AddCaseForm() {
   const divisionNameFromQuery = query.get("divisionName");
 
   const [realCourtName, setRealCourtName] = useState(courtName || "");
-  const [realDivisionName, setRealDivisionName] = useState(divisionNameFromQuery || "");
+  const [realDivisionName, setRealDivisionName] = useState(
+    divisionNameFromQuery || ""
+  );
 
   const isEdit = Boolean(caseId);
 
@@ -191,7 +120,8 @@ export default function AddCaseForm() {
 
     if (!isEdit) {
       formToSend.append("court", courtId);
-      if (divisionNameFromQuery) formToSend.append("division_name", divisionNameFromQuery);
+      if (divisionNameFromQuery)
+        formToSend.append("division_name", divisionNameFromQuery);
     }
 
     try {
@@ -214,64 +144,91 @@ export default function AddCaseForm() {
 
   return (
     <div className="add-case-container">
-      <h2>{isEdit ? "تعديل قضية" : "إضافة قضية"} - {realCourtName}</h2>
+      <h2>
+        {isEdit ? "تعديل قضية" : "إضافة قضية"} - {realCourtName}
+      </h2>
 
->>>>>>> 6590e2905c3fadac5933a2ce6732f1103311bb2e
       <form onSubmit={handleSubmit} className="case-form">
         <label>تاريخ ورود الدعوى</label>
-        <input type="date" name="date_received" value={formData.date_received} onChange={handleChange} required />
+        <input
+          type="date"
+          name="date_received"
+          value={formData.date_received}
+          onChange={handleChange}
+          required
+        />
 
         <label>رقم الحصر العام</label>
-<<<<<<< HEAD
-        <input type="text" value="سيتم توليده تلقائيًا" disabled />
-=======
-        <input type="text" name="general_number" value={formData.general_number} onChange={handleChange} required />
->>>>>>> 6590e2905c3fadac5933a2ce6732f1103311bb2e
+        <input
+          type="text"
+          name="general_number"
+          value={formData.general_number}
+          onChange={handleChange}
+          required
+        />
 
         <label>رقم حصر القضايا</label>
-        <input type="text" name="case_number" value={formData.case_number} onChange={handleChange} required />
+        <input
+          type="text"
+          name="case_number"
+          value={formData.case_number}
+          onChange={handleChange}
+          required
+        />
 
         <label>رقم الدعوى والسنة القضائية</label>
-        <input type="text" name="lawsuit_number" value={formData.lawsuit_number} onChange={handleChange} required />
+        <input
+          type="text"
+          name="lawsuit_number"
+          value={formData.lawsuit_number}
+          onChange={handleChange}
+          required
+        />
 
         <label>المحكمة المرفوع أمامها الدعوى</label>
-<<<<<<< HEAD
-        <input type="text" value={selectedCourt?.name || ""} disabled />
-=======
-        <input type="text" disabled value={realDivisionName ? `${realCourtName} - ${realDivisionName}` : realCourtName} style={{ background: "#eee", color: "#777" }} />
->>>>>>> 6590e2905c3fadac5933a2ce6732f1103311bb2e
+        <input
+          type="text"
+          disabled
+          value={
+            realDivisionName
+              ? `${realCourtName} - ${realDivisionName}`
+              : realCourtName
+          }
+          style={{ background: "#eee", color: "#777" }}
+        />
 
         <label>اسم المدعي</label>
-        <input type="text" name="plaintiff" value={formData.plaintiff} onChange={handleChange} required />
+        <input
+          type="text"
+          name="plaintiff"
+          value={formData.plaintiff}
+          onChange={handleChange}
+          required
+        />
 
         <label>اسم المدعى عليه</label>
-        <input type="text" name="defendant" value={formData.defendant} onChange={handleChange} required />
+        <input
+          type="text"
+          name="defendant"
+          value={formData.defendant}
+          onChange={handleChange}
+          required
+        />
 
         <label>الطلبات</label>
-        <textarea name="requests" value={formData.requests} onChange={handleChange}></textarea>
+        <textarea
+          name="requests"
+          value={formData.requests}
+          onChange={handleChange}
+        ></textarea>
 
-<<<<<<< HEAD
-        <label>تاريخ الجلسة</label>
-        <input type="date" name="hearing_date" value={formData.hearing_date} onChange={handleChange} />
-
-        <label>الحكم الصادر في الدعوى</label>
-        <div>
-          <input type="radio" name="verdict" value="for_university" onChange={handleChange} /> لصالح الجامعة
-          <input type="radio" name="verdict" value="against_university" onChange={handleChange} /> ضد الجامعة
-        </div>
-
-        <label>موقف الدعوى من الطعن</label>
-        <select name="appeal_status" value={formData.appeal_status} onChange={handleChange}>
-          <option value="">اختيار...</option>
-          <option value={true}>تم الطعن</option>
-          <option value={false}>لم يتم الطعن</option>
-        </select>
-
-        <label>تاريخ الحفظ</label>
-        <input type="date" name="date_saved" value={formData.date_saved} onChange={handleChange} />
-=======
         <label>تاريخ الجلسات</label>
-        <input type="date" name="hearing_dates" value={formData.hearing_dates} onChange={handleChange} />
+        <input
+          type="date"
+          name="hearing_dates"
+          value={formData.hearing_dates}
+          onChange={handleChange}
+        />
 
         <label class="group-title">الحكم الصادر ف الدعوى</label>
         <div className="radio-group">
@@ -281,7 +238,9 @@ export default function AddCaseForm() {
               name="ruling"
               value="for_university"
               checked={formData.ruling === "for_university"}
-              onChange={(e) => setFormData({ ...formData, ruling: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, ruling: e.target.value })
+              }
             />
             <span>لصالح الجامعة</span>
           </label>
@@ -292,7 +251,9 @@ export default function AddCaseForm() {
               name="ruling"
               value="against_university"
               checked={formData.ruling === "against_university"}
-              onChange={(e) => setFormData({ ...formData, ruling: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, ruling: e.target.value })
+              }
             />
             <span>ضد الجامعة</span>
           </label>
@@ -307,7 +268,9 @@ export default function AddCaseForm() {
               name="appeal_status"
               value="true"
               checked={formData.appeal_status === "true"}
-              onChange={(e) => setFormData({ ...formData, appeal_status: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, appeal_status: e.target.value })
+              }
             />
             <span>تم الطعن</span>
           </label>
@@ -318,48 +281,63 @@ export default function AddCaseForm() {
               name="appeal_status"
               value="false"
               checked={formData.appeal_status === "false"}
-              onChange={(e) => setFormData({ ...formData, appeal_status: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, appeal_status: e.target.value })
+              }
             />
             <span>لم يتم الطعن</span>
           </label>
         </div>
 
-
-
         <label>حالة القضية</label>
-        <select name="case_status" value={formData.case_status} onChange={handleChange}>
+        <select
+          name="case_status"
+          value={formData.case_status}
+          onChange={handleChange}
+        >
           <option value="">اختيار...</option>
-          {CASE_STATUS_CHOICES.map(c => (
-            <option key={c.value} value={c.value}>{c.label}</option>
+          {CASE_STATUS_CHOICES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
           ))}
         </select>
 
         <label>تاريخ الحفظ</label>
-        <input type="date" name="saved_date" value={formData.saved_date} onChange={handleChange} />
->>>>>>> 6590e2905c3fadac5933a2ce6732f1103311bb2e
+        <input
+          type="date"
+          name="saved_date"
+          value={formData.saved_date}
+          onChange={handleChange}
+        />
 
         <label>ملاحظات الدعوى</label>
-        <textarea name="notes" value={formData.notes} onChange={handleChange}></textarea>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+        ></textarea>
 
-<<<<<<< HEAD
-        <label>ملف الدعوى (اختياري)</label>
-        <input type="file" name="file" onChange={handleChange} />
-
-        <button type="submit" className="submit-btn">إضافة القضية</button>
-=======
         <label>ملف الدعوى</label>
         <input type="file" name="file" onChange={handleChange} />
 
         <div className="modal-actions">
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "جاري الحفظ..." : isEdit ? "حفظ التعديلات" : "حفظ القضية"}
+            {loading
+              ? "جاري الحفظ..."
+              : isEdit
+              ? "حفظ التعديلات"
+              : "حفظ القضية"}
           </button>
 
-          <button type="button" className="btn btn-secondary" onClick={() => navigate("/cases")}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => navigate("/cases")}
+          >
             إلغاء
           </button>
         </div>
->>>>>>> 6590e2905c3fadac5933a2ce6732f1103311bb2e
       </form>
     </div>
   );
