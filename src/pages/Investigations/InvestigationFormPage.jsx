@@ -7,6 +7,7 @@ export default function InvestigationFormPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error } = useSelector((s) => s.investigations);
+  const today = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -28,12 +29,27 @@ export default function InvestigationFormPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     const data = new FormData();
-    Object.entries(form).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && String(v).trim() !== "") {
-        data.append(k, v);
-      }
-    });
+
+    // Add all regular fields first
+    // Object.entries(form).forEach(([k, v]) => {
+    //   if (v === undefined || v === null || String(v).trim() === "") return;
+    //   if (k !== "accused_names") {
+    //     // Skip accused_names here
+    //     data.append(k, v);
+    //   }
+    // });
+
+    // Process accused_names separately
+    // if (form.accused_names && form.accused_names.trim() !== "") {
+    //   String(form.accused_names)
+    //     .split(/[,،]/)
+    //     .map((name) => name.trim())
+    //     .filter(Boolean)
+    //     .forEach((name) => data.append("accused_names", name)); // Same name, multiple values
+    // }
+
     if (file) data.append("file", file);
+
     const res = await dispatch(createInvestigation(data));
     if (res.meta.requestStatus === "fulfilled") {
       navigate("/investigations");
@@ -92,6 +108,7 @@ export default function InvestigationFormPage() {
               className="form-control"
               value={form.date_received}
               onChange={onChange}
+              max={today}
               required
             />
           </div>
@@ -140,7 +157,7 @@ export default function InvestigationFormPage() {
               name="accused_names"
               className="form-control"
               value={form.accused_names}
-              onChange={onChange}
+              // onChange={onChange}
               placeholder="افصل بين الأسماء بفاصلة إن لزم"
               required
             />

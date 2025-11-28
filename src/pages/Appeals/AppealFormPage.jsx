@@ -44,14 +44,14 @@ export default function AppealFormPage() {
       }
     });
     if (file) data.append("file", file);
-    const res = await dispatch(createAppeal(data));
+    const res = dispatch(createAppeal(data));
     if (res.meta.requestStatus === "fulfilled") {
       navigate("/appeals");
     }
   };
 
   return (
-    <div className="container-fluid">
+    <div className="container-fluid position-relative">
       <h4 className="mb-3">إضافة تظلم</h4>
       {error && <div className="alert alert-danger">{String(error)}</div>}
       <form className="card p-3" onSubmit={onSubmit}>
@@ -126,19 +126,41 @@ export default function AppealFormPage() {
             />
           </div>
         </div>
-        <div className="mt-3 d-flex gap-2">
+        <div className="mt-3 d-flex gap-2 align-items-center">
           <button disabled={loading} className="btn btn-primary" type="submit">
-            حفظ
+            {loading ? (
+              <>
+                <span
+                  className="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
+                جارٍ الحفظ...
+              </>
+            ) : (
+              "حفظ"
+            )}
           </button>
           <button
             type="button"
             className="btn btn-outline-secondary"
             onClick={() => navigate(-1)}
+            disabled={loading}
           >
             إلغاء
           </button>
         </div>
       </form>
+      {loading && (
+        <div
+          className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(255,255,255,0.6)" }}
+        >
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

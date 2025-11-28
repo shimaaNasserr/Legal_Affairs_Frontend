@@ -35,7 +35,9 @@ const Navbar = ({ onMenuToggle }) => {
         </div>
         <span className="app-name">
           <span>إدارة الشؤون القانونية</span>
-          <span style={{fontSize: '0.75rem', opacity: 0.8, fontWeight: 400}}>جامعة بورسعيد</span>
+          <span style={{ fontSize: "0.75rem", opacity: 0.8, fontWeight: 400 }}>
+            جامعة بورسعيد
+          </span>
         </span>
       </div>
       <div className="navbar-right">

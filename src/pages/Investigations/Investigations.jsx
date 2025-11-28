@@ -14,7 +14,7 @@ const Investigations = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    accused_names_input: [],
+    accused_names_input: "",
     date_received: "",
     date_started: "",
     date_completed: "",
@@ -64,9 +64,8 @@ const Investigations = () => {
     if (e.target.name === "file") {
       setFormData({ ...formData, file: e.target.files[0] });
     } else if (e.target.name === "accused_names_input") {
-      // معالجة أسماء المتهمين كقائمة
-      const names = e.target.value.split(',').map(n => n.trim()).filter(n => n);
-      setFormData({ ...formData, accused_names_input: names });
+      // معالجة أسماء المتهمين كقائمة (تدعم الفاصلة العربية والإنجليزية)
+      setFormData({ ...formData, accused_names_input: e.target.value });
     } else {
       setFormData({ ...formData, [e.target.name]: e.target.value });
     }
@@ -84,13 +83,16 @@ const Investigations = () => {
             submitData.append("file", formData.file);
           }
         } else if (key === "accused_names_input") {
-          // إرسال أسماء المتهمين كقائمة
-          formData.accused_names_input.forEach(name => {
-            submitData.append("accused_names_input", name);
+          const names = String(formData.accused_names_input || "")
+            .split(/[,،]/)
+            .map((n) => n.trim())
+            .filter((n) => n);
+          names.forEach((name) => {
+            submitData.append("accused_names", name); // Changed to accused_names
           });
         } else if (key === "assigned_investigators") {
           // إرسال المحققين كقائمة
-          formData.assigned_investigators.forEach(investigatorId => {
+          formData.assigned_investigators.forEach((investigatorId) => {
             submitData.append("assigned_investigators", investigatorId);
           });
         } else if (formData[key] !== null && formData[key] !== "") {
@@ -126,7 +128,7 @@ const Investigations = () => {
     setFormData({
       title: investigation.title || "",
       description: investigation.description || "",
-      accused_names_input: investigation.accused_names_list || [],
+      accused_names_input: (investigation.accused_names || []).join(", "),
       date_received: investigation.date_received || "",
       date_started: investigation.date_started || "",
       date_completed: investigation.date_completed || "",
@@ -141,7 +143,8 @@ const Investigations = () => {
       findings: investigation.findings || "",
       recommendations: investigation.recommendations || "",
       department: investigation.department || "",
-      assigned_investigators: investigation.assigned_investigators_details?.map(i => i.id) || [],
+      assigned_investigators:
+        investigation.assigned_investigators_details?.map((i) => i.id) || [],
       file: null,
     });
     setShowModal(true);
@@ -163,7 +166,7 @@ const Investigations = () => {
     setFormData({
       title: "",
       description: "",
-      accused_names_input: [],
+      accused_names_input: "",
       date_received: "",
       date_started: "",
       date_completed: "",
@@ -261,10 +264,14 @@ const Investigations = () => {
               <div className="card-header">
                 <h3>{investigation.title}</h3>
                 <div className="badges">
-                  <span className={`status-badge status-${investigation.status}`}>
+                  <span
+                    className={`status-badge status-${investigation.status}`}
+                  >
                     {getStatusName(investigation.status)}
                   </span>
-                  <span className={`priority-badge priority-${investigation.priority}`}>
+                  <span
+                    className={`priority-badge priority-${investigation.priority}`}
+                  >
                     {getPriorityName(investigation.priority)}
                   </span>
                 </div>
@@ -272,16 +279,20 @@ const Investigations = () => {
               <p className="description">{investigation.description}</p>
               <div className="card-details">
                 <span>
-                  <i className="ri-hashtag"></i> رقم التحقيق: {investigation.general_number || "-"}
+                  <i className="ri-hashtag"></i> رقم التحقيق:{" "}
+                  {investigation.general_number || "-"}
                 </span>
                 <span>
-                  <i className="ri-building-line"></i> {investigation.department_name || "-"}
+                  <i className="ri-building-line"></i>{" "}
+                  {investigation.department_name || "-"}
                 </span>
-                {investigation.accused_names_list && investigation.accused_names_list.length > 0 && (
-                  <span>
-                    <i className="ri-team-line"></i> المتهمون: {investigation.accused_names_list.join(", ")}
-                  </span>
-                )}
+                {investigation.accused_names_list &&
+                  investigation.accused_names_list.length > 0 && (
+                    <span>
+                      <i className="ri-team-line"></i> المتهمون:{" "}
+                      {investigation.accused_names_list.join(", ")}
+                    </span>
+                  )}
                 {investigation.file && (
                   <a
                     href={investigation.file}
@@ -318,15 +329,15 @@ const Investigations = () => {
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-content large-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h3>
                 {editingInvestigation ? "تعديل تحقيق" : "إضافة تحقيق جديد"}
               </h3>
-              <button
-                className="close-btn"
-                onClick={() => setShowModal(false)}
-              >
+              <button className="close-btn" onClick={() => setShowModal(false)}>
                 ×
               </button>
             </div>
@@ -410,7 +421,9 @@ const Investigations = () => {
                   >
                     <option value="against_university">ضد الجامعة</option>
                     <option value="by_university">مرفوعة من الجامعة</option>
-                    <option value="internal_disciplinary">تأديبية داخلية</option>
+                    <option value="internal_disciplinary">
+                      تأديبية داخلية
+                    </option>
                     <option value="academic_misconduct">مخالفة أكاديمية</option>
                     <option value="administrative">إدارية</option>
                   </select>
@@ -422,7 +435,7 @@ const Investigations = () => {
                 <input
                   type="text"
                   name="accused_names_input"
-                  value={formData.accused_names_input.join(", ")}
+                  value={formData.accused_names_input}
                   onChange={handleChange}
                   placeholder="اسم1, اسم2, اسم3"
                 />
