@@ -1,28 +1,24 @@
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createAppeal } from "../../features/appeals/appealSlice";
-import { fetchInvestigations } from "../../features/investigations/investigationSlice";
+import {
+  useCreateAppealMutation,
+  useGetInvestigationsQuery,
+} from "../../services/api";
 
 export default function AppealFormPage() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error } = useSelector((s) => s.appeals);
-  const investigations = useSelector((s) => s.investigations.items);
+  const [createAppeal, { isLoading: loading, error }] =
+    useCreateAppealMutation();
+  // Use cached query for investigations - data is automatically cached
+  const { data: investigations = [] } = useGetInvestigationsQuery();
   const [form, setForm] = useState({
-    number: "",
+    title: "",
     investigation: "",
-    appellant_name: "",
-    appeal_reason: "",
-    date_submitted: "",
+    accused_names: "",
+    description: "",
+    date_received: "",
   });
   const [file, setFile] = useState(null);
-
-  useEffect(() => {
-    if (!investigations || investigations.length === 0) {
-      dispatch(fetchInvestigations());
-    }
-  }, [dispatch]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -33,35 +29,42 @@ export default function AppealFormPage() {
     e.preventDefault();
     const data = new FormData();
     Object.entries({
-      number: form.number,
+      title: form.title,
       investigation: form.investigation,
-      appellant_name: form.appellant_name,
-      appeal_reason: form.appeal_reason,
-      date_submitted: form.date_submitted,
+      accused_names: form.accused_names,
+      description: form.description,
+      date_received: form.date_received,
     }).forEach(([k, v]) => {
       if (v !== undefined && v !== null && String(v).trim() !== "") {
         data.append(k, v);
       }
     });
     if (file) data.append("file", file);
-    const res = dispatch(createAppeal(data));
-    if (res.meta.requestStatus === "fulfilled") {
+    try {
+      await createAppeal(data).unwrap();
       navigate("/appeals");
+      // Cache is automatically invalidated and refetched by RTK Query
+    } catch (err) {
+      console.error("Error creating appeal:", err);
     }
   };
 
   return (
     <div className="container-fluid position-relative">
       <h4 className="mb-3">إضافة تظلم</h4>
-      {error && <div className="alert alert-danger">{String(error)}</div>}
+      {error && (
+        <div className="alert alert-danger">
+          {error?.data?.message || error?.message || String(error)}
+        </div>
+      )}
       <form className="card p-3" onSubmit={onSubmit}>
         <div className="row g-3">
           <div className="col-md-4">
-            <label className="form-label">رقم التظلم</label>
+            <label className="form-label">عنوان التظلم</label>
             <input
-              name="number"
+              name="title"
               className="form-control"
-              value={form.number}
+              value={form.title}
               onChange={onChange}
               required
             />
@@ -86,33 +89,33 @@ export default function AppealFormPage() {
             </select>
           </div>
           <div className="col-md-4">
-            <label className="form-label">اسم المستأنف</label>
+            <label className="form-label">أسماء المتهمين</label>
             <input
-              name="appellant_name"
+              name="accused_names"
               className="form-control"
-              value={form.appellant_name}
+              value={form.accused_names}
               onChange={onChange}
               required
             />
           </div>
           <div className="col-md-6">
-            <label className="form-label">تاريخ التقديم</label>
+            <label className="form-label">تاريخ الاستلام</label>
             <input
               type="date"
-              name="date_submitted"
+              name="date_received"
               className="form-control"
-              value={form.date_submitted}
+              value={form.date_received}
               onChange={onChange}
               required
             />
           </div>
           <div className="col-12">
-            <label className="form-label">سبب التظلم</label>
+            <label className="form-label">وصف التظلم</label>
             <textarea
-              name="appeal_reason"
+              name="description"
               className="form-control"
               rows="3"
-              value={form.appeal_reason}
+              value={form.description}
               onChange={onChange}
               required
             />

@@ -1,17 +1,17 @@
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
-import { fetchAppealById } from "../../features/appeals/appealSlice";
+import { useGetAppealByIdQuery } from "../../services/api";
 import axiosInstance from "../../apis/axiosInstance";
 
 export default function AppealDetailPage() {
   const { id } = useParams();
-  const dispatch = useDispatch();
-  const { item, loading, error } = useSelector((s) => s.appeals);
-
-  useEffect(() => {
-    if (id) dispatch(fetchAppealById(id));
-  }, [dispatch, id]);
+  // Use cached query - data is automatically cached and reused
+  const {
+    data: item,
+    isLoading: loading,
+    error,
+  } = useGetAppealByIdQuery(id, {
+    skip: !id,
+  });
 
   if (loading) return <div className="container-fluid">جاري التحميل...</div>;
   if (error)

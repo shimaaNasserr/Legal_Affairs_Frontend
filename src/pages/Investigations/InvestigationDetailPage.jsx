@@ -1,16 +1,12 @@
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
-import { fetchInvestigationById } from "../../features/investigations/investigationSlice";
+import { useGetInvestigationByIdQuery } from "../../services/api";
 
 export default function InvestigationDetailPage() {
   const { id } = useParams();
-  const dispatch = useDispatch();
-  const { item, loading, error } = useSelector((s) => s.investigations);
-
-  useEffect(() => {
-    if (id) dispatch(fetchInvestigationById(id));
-  }, [dispatch, id]);
+  // Use cached query - data is automatically cached and reused
+  const { data: item, isLoading: loading, error } = useGetInvestigationByIdQuery(id, {
+    skip: !id,
+  });
 
   if (loading) return <div className="container-fluid">جاري التحميل...</div>;
   if (error)

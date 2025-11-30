@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { createInvestigation } from "../../features/investigations/investigationSlice";
+import { useCreateInvestigationMutation } from "../../services/api";
 
 export default function InvestigationFormPage() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error } = useSelector((s) => s.investigations);
+  const [createInvestigation, { isLoading: loading, error }] = useCreateInvestigationMutation();
   const today = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState({
     title: "",
@@ -50,16 +48,23 @@ export default function InvestigationFormPage() {
 
     if (file) data.append("file", file);
 
-    const res = await dispatch(createInvestigation(data));
-    if (res.meta.requestStatus === "fulfilled") {
+    try {
+      await createInvestigation(data).unwrap();
       navigate("/investigations");
+      // Cache is automatically invalidated and refetched by RTK Query
+    } catch (err) {
+      console.error("Error creating investigation:", err);
     }
   };
 
   return (
     <div className="container-fluid">
       <h4 className="mb-3">إضافة تحقيق</h4>
-      {error && <div className="alert alert-danger">{String(error)}</div>}
+      {error && (
+        <div className="alert alert-danger">
+          {error?.data?.message || error?.message || String(error)}
+        </div>
+      )}
       <form className="card p-3" onSubmit={onSubmit}>
         <div className="row g-3">
           <div className="col-md-6">

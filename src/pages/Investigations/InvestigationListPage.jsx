@@ -1,22 +1,20 @@
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useState } from "react";
+import { useDispatch } from "react-redux";
 import {
-  fetchInvestigations,
   setFilters,
   clearFilters,
 } from "../../features/investigations/investigationSlice";
+import { useGetInvestigationsQuery } from "../../services/api";
+import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 
 export default function InvestigationListPage() {
   const dispatch = useDispatch();
-  const { items, loading, error, filters } = useSelector(
-    (s) => s.investigations
-  );
+  const { filters } = useSelector((s) => s.investigations);
   const [localFilters, setLocalFilters] = useState(filters);
-
-  useEffect(() => {
-    dispatch(fetchInvestigations(filters));
-  }, [dispatch, filters]);
+  
+  // Use cached query with filters
+  const { data: items, isLoading: loading, error } = useGetInvestigationsQuery(filters);
 
   const onChange = (e) => {
     const { name, value } = e.target;

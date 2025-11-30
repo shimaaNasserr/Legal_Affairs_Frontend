@@ -1,15 +1,9 @@
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { fetchAppeals } from "../../features/appeals/appealSlice";
+import { useGetAppealsQuery } from "../../services/api";
 
 export default function AppealListPage() {
-  const dispatch = useDispatch();
-  const { items, loading, error } = useSelector((s) => s.appeals);
-
-  useEffect(() => {
-    dispatch(fetchAppeals());
-  }, [dispatch]);
+  // Use cached query - data is automatically cached and reused
+  const { data: items, isLoading: loading, error } = useGetAppealsQuery();
 
   return (
     <div className="container-fluid">
