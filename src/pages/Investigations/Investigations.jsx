@@ -39,6 +39,91 @@ const Investigations = () => {
   });
   const [error, setError] = useState("");
 
+  // Normalize backend errors (including field-level validation) into a readable form
+  const extractErrorMessages = (err) => {
+    const data = err?.data || err?.response?.data || err;
+    if (!data) return "حدث خطأ غير متوقع";
+
+    if (typeof data === "string") return data;
+
+    const fieldLabels = {
+      title: "عنوان التحقيق",
+      description: "وصف التحقيق",
+      accused_names: "أسماء المتهمين",
+      date_received: "تاريخ الاستلام",
+      date_started: "تاريخ البداية",
+      date_completed: "تاريخ الانتهاء",
+      status: "الحالة",
+      priority: "الأولوية",
+      case_type: "نوع القضية",
+      complainant_type: "نوع المشتكي",
+      complainant_name: "اسم المشتكي",
+      complainant_id: "رقم هوية المشتكي",
+      faculty_college: "الكلية/الجهة",
+      notes: "الملاحظات",
+      findings: "النتائج",
+      recommendations: "التوصيات",
+      department: "الإدارة",
+      assigned_investigators: "المحققون",
+      file: "ملف التحقيق",
+    };
+
+    const labelize = (key) => fieldLabels[key] || key;
+
+    const collectMessages = (value, path = []) => {
+      if (Array.isArray(value)) {
+        return value.flatMap((entry) => collectMessages(entry, path));
+      }
+      if (value && typeof value === "object") {
+        return Object.entries(value).flatMap(([childKey, childValue]) =>
+          collectMessages(childValue, [...path, childKey])
+        );
+      }
+      if (value === null || value === undefined || value === "") {
+        return [];
+      }
+      const labelPath = path
+        .map((segment) =>
+          /^\d+$/.test(segment)
+            ? `البند ${Number(segment) + 1}`
+            : labelize(segment)
+        )
+        .join(" → ");
+      return [
+        labelPath
+          ? `${labelPath}: ${value}`
+          : typeof value === "string"
+          ? value
+          : JSON.stringify(value),
+      ];
+    };
+
+    const mainMessage = data.detail || data.message || null;
+
+    const fieldErrors = Object.entries(data)
+      .filter(
+        ([key]) => !["detail", "message", "non_field_errors"].includes(key)
+      )
+      .flatMap(([field, value]) => collectMessages(value, [field]));
+
+    const nonField =
+      Array.isArray(data.non_field_errors) && data.non_field_errors.length > 0
+        ? data.non_field_errors
+        : [];
+
+    const allMessages = [
+      ...(mainMessage ? [mainMessage] : []),
+      ...nonField,
+      ...fieldErrors,
+    ];
+
+    if (allMessages.length === 0) {
+      return JSON.stringify(data);
+    }
+
+    return allMessages.length === 1 ? allMessages[0] : allMessages;
+  };
+
   // Use cached query - data is automatically cached and reused
   const {
     data: investigations = [],
@@ -278,7 +363,7 @@ const Investigations = () => {
       // Cache is automatically invalidated and refetched by RTK Query
     } catch (err) {
       console.error("Error saving investigation:", err);
-      setError(err.data?.message || err.message || "فشل في حفظ التحقيق");
+      setError(extractErrorMessages(err) || "فشل في حفظ التحقيق");
     }
   };
 
@@ -296,7 +381,7 @@ const Investigations = () => {
       // Cache is automatically invalidated and refetched by RTK Query
     } catch (err) {
       console.error("Error deleting investigation:", err);
-      setError("فشل في حذف التحقيق");
+      setError(extractErrorMessages(err) || "فشل في حذف التحقيق");
     }
   };
 
@@ -380,7 +465,17 @@ const Investigations = () => {
 
       {(error || queryError) && (
         <div className="alert alert-danger">
-          {error || queryError?.data?.message || "فشل في تحميل التحقيقات"}
+          {Array.isArray(error) ? (
+            <ul className="mb-0">
+              {error.map((msg, idx) => (
+                <li key={idx}>{msg}</li>
+              ))}
+            </ul>
+          ) : (
+            error ||
+            (queryError && extractErrorMessages(queryError)) ||
+            "فشل في تحميل التحقيقات"
+          )}
         </div>
       )}
 
@@ -745,7 +840,19 @@ const Investigations = () => {
                 />
               </div>
 
-              {error && <div className="alert alert-danger">{error}</div>}
+              {error && (
+                <div className="alert alert-danger">
+                  {Array.isArray(error) ? (
+                    <ul className="mb-0">
+                      {error.map((msg, idx) => (
+                        <li key={idx}>{msg}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    error
+                  )}
+                </div>
+              )}
 
               <div className="modal-actions">
                 <button

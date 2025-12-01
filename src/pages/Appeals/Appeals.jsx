@@ -41,6 +41,81 @@ const Appeals = () => {
   });
   const [error, setError] = useState("");
 
+  // Normalize backend errors (including field-level validation) into a readable form
+  const extractErrorMessages = (err) => {
+    const data = err?.data || err?.response?.data || err;
+    if (!data) return "حدث خطأ غير متوقع";
+
+    if (typeof data === "string") return data;
+
+    const fieldLabels = {
+      investigation: "التحقيق المرتبط",
+      appeal_number: "رقم التظلم",
+      appellant_name: "اسم المستأنف",
+      appeal_reason: "سبب التظلم",
+      date_submitted: "تاريخ التقديم",
+      date_reviewed: "تاريخ المراجعة",
+      status: "الحالة",
+      decision: "القرار",
+      notes: "الملاحظات",
+      file: "ملف التظلم",
+    };
+
+    const labelize = (key) => fieldLabels[key] || key;
+
+    const collectMessages = (value, path = []) => {
+      if (Array.isArray(value)) {
+        return value.flatMap((entry) => collectMessages(entry, path));
+      }
+      if (value && typeof value === "object") {
+        return Object.entries(value).flatMap(([childKey, childValue]) =>
+          collectMessages(childValue, [...path, childKey])
+        );
+      }
+      if (value === null || value === undefined || value === "") {
+        return [];
+      }
+      const labelPath = path
+        .map((segment) =>
+          /^\d+$/.test(segment) ? `البند ${Number(segment) + 1}` : labelize(segment)
+        )
+        .join(" → ");
+      return [
+        labelPath
+          ? `${labelPath}: ${value}`
+          : typeof value === "string"
+          ? value
+          : JSON.stringify(value),
+      ];
+    };
+
+    const mainMessage = data.detail || data.message || null;
+
+    const fieldErrors = Object.entries(data)
+      .filter(
+        ([key]) =>
+          !["detail", "message", "non_field_errors"].includes(key)
+      )
+      .flatMap(([field, value]) => collectMessages(value, [field]));
+
+    const nonField =
+      Array.isArray(data.non_field_errors) && data.non_field_errors.length > 0
+        ? data.non_field_errors
+        : [];
+
+    const allMessages = [
+      ...(mainMessage ? [mainMessage] : []),
+      ...nonField,
+      ...fieldErrors,
+    ];
+
+    if (allMessages.length === 0) {
+      return JSON.stringify(data);
+    }
+
+    return allMessages.length === 1 ? allMessages[0] : allMessages;
+  };
+
   const handleChange = (e) => {
     if (e.target.name === "file") {
       setFormData({ ...formData, file: e.target.files[0] });
@@ -79,7 +154,12 @@ const Appeals = () => {
       resetForm();
     } catch (err) {
       console.error("Error saving appeal:", err);
-      setError(err?.data?.message || err?.data?.detail || "فشل في حفظ التظلم");
+      setError(
+        extractErrorMessages(err) ||
+          err?.data?.message ||
+          err?.data?.detail ||
+          "فشل في حفظ التظلم"
+      );
     }
   };
 
@@ -108,7 +188,12 @@ const Appeals = () => {
       // Cache is automatically invalidated and refetched by RTK Query
     } catch (err) {
       console.error("Error deleting appeal:", err);
-      setError(err?.data?.message || err?.data?.detail || "فشل في حذف التظلم");
+      setError(
+        extractErrorMessages(err) ||
+          err?.data?.message ||
+          err?.data?.detail ||
+          "فشل في حذف التظلم"
+      );
     }
   };
 
@@ -173,7 +258,17 @@ const Appeals = () => {
 
       {(error || appealsError) && (
         <div className="alert alert-danger">
-          {error || appealsError?.data?.message || "فشل في تحميل التظلمات"}
+          {Array.isArray(error) ? (
+            <ul className="mb-0">
+              {error.map((msg, idx) => (
+                <li key={idx}>{msg}</li>
+              ))}
+            </ul>
+          ) : (
+            error ||
+            (appealsError && extractErrorMessages(appealsError)) ||
+            "فشل في تحميل التظلمات"
+          )}
         </div>
       )}
 
@@ -387,7 +482,19 @@ const Appeals = () => {
                 />
               </div>
 
-              {error && <div className="alert alert-danger">{error}</div>}
+              {error && (
+                <div className="alert alert-danger">
+                  {Array.isArray(error) ? (
+                    <ul className="mb-0">
+                      {error.map((msg, idx) => (
+                        <li key={idx}>{msg}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    error
+                  )}
+                </div>
+              )}
 
               <div className="modal-actions">
                 <button
