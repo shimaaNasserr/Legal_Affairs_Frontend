@@ -1,36 +1,24 @@
-import React, { useState, useEffect, useContext } from "react";
-import axiosInstance from "../../apis/axiosInstance";
+import React, { useState, useMemo, useContext } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useGetCasesQuery } from "../../services/api";
 import "./Cases.css";
 
 const Cases = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [cases, setCases] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [appealNotifications, setAppealNotifications] = useState([]);
 
-  const fetchCases = async () => {
-    try {
-      const res = await axiosInstance.get("cases/");
-      setCases(res.data);
+  // Use cached query - data is automatically cached and reused
+  const { data: casesData, isLoading: loading, error } = useGetCasesQuery();
+  const cases = casesData?.results || casesData || [];
 
-      const pendingAppeals = res.data.filter((c) => c.appeal_status === null);
-      setAppealNotifications(pendingAppeals);
-    } catch (err) {
-      console.error("Error fetching cases:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCases();
-  }, []);
+  // Calculate appeal notifications from cached data
+  const appealNotifications = useMemo(() => {
+    return cases.filter((c) => c.appeal_status === null);
+  }, [cases]);
 
   // =====================================
   // فتح الفورم للتعديل

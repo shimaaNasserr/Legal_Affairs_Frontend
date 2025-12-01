@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useContext } from "react";
 import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
+import { useGetContractsQuery, useGetDepartmentsQuery } from "../../services/api";
 import "./Contracts.css";
 
 const Contracts = () => {
   const { user } = useContext(AuthContext);
-  const [contracts, setContracts] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,31 +23,11 @@ const Contracts = () => {
   });
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchContracts();
-    fetchDepartments();
-  }, []);
-
-  const fetchDepartments = async () => {
-    try {
-      const res = await axiosInstance.get("departments/");
-      setDepartments(res.data);
-    } catch (err) {
-      console.error("Error fetching departments:", err);
-    }
-  };
-
-  const fetchContracts = async () => {
-    try {
-      const res = await axiosInstance.get("contracts/");
-      setContracts(res.data);
-    } catch (err) {
-      console.error("Error fetching contracts:", err);
-      setError("فشل في تحميل العقود");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use cached queries - data is automatically cached and reused
+  const { data: contractsData, isLoading: loading, error: contractsError } = useGetContractsQuery();
+  const { data: departments = [] } = useGetDepartmentsQuery();
+  
+  const contracts = contractsData?.results || contractsData || [];
 
   const handleChange = (e) => {
     if (e.target.name === "file") {
@@ -91,7 +69,8 @@ const Contracts = () => {
       setShowModal(false);
       setEditingContract(null);
       resetForm();
-      fetchContracts();
+      // Cache will be invalidated by RTK Query if we add mutations
+      window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error saving contract:", err);
       setError(err.response?.data?.message || "فشل في حفظ العقد");
@@ -119,7 +98,8 @@ const Contracts = () => {
 
     try {
       await axiosInstance.delete(`contracts/${contractId}/`);
-      fetchContracts();
+      // Cache will be invalidated by RTK Query if we add mutations
+      window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error deleting contract:", err);
       setError("فشل في حذف العقد");
@@ -186,7 +166,11 @@ const Contracts = () => {
         )}
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      {(error || contractsError) && (
+        <div className="alert alert-danger">
+          {error || (contractsError && String(contractsError))}
+        </div>
+      )}
 
       <div className="filters">
         <div className="search-box">
@@ -415,7 +399,11 @@ const Contracts = () => {
                 />
               </div>
 
-              {error && <div className="alert alert-danger">{error}</div>}
+              {(error || contractsError) && (
+        <div className="alert alert-danger">
+          {error || (contractsError && String(contractsError))}
+        </div>
+      )}
 
               <div className="modal-actions">
                 <button type="submit" className="btn btn-primary">

@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useContext } from "react";
 import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
+import { useGetFatwasQuery, useGetDepartmentsQuery } from "../../services/api";
 import "./Fatwas.css";
 
 const Fatwas = () => {
   const { user } = useContext(AuthContext);
-  const [fatwas, setFatwas] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingFatwa, setEditingFatwa] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,31 +17,11 @@ const Fatwas = () => {
   });
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchFatwas();
-    fetchDepartments();
-  }, []);
-
-  const fetchDepartments = async () => {
-    try {
-      const res = await axiosInstance.get("departments/");
-      setDepartments(res.data);
-    } catch (err) {
-      console.error("Error fetching departments:", err);
-    }
-  };
-
-  const fetchFatwas = async () => {
-    try {
-      const res = await axiosInstance.get("fatwas/");
-      setFatwas(res.data);
-    } catch (err) {
-      console.error("Error fetching fatwas:", err);
-      setError("فشل في تحميل الفتاوى");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use cached queries - data is automatically cached and reused
+  const { data: fatwasData, isLoading: loading, error: fatwasError } = useGetFatwasQuery();
+  const { data: departments = [] } = useGetDepartmentsQuery();
+  
+  const fatwas = fatwasData?.results || fatwasData || [];
 
   const handleChange = (e) => {
     if (e.target.name === "file") {
@@ -81,7 +59,8 @@ const Fatwas = () => {
       setShowModal(false);
       setEditingFatwa(null);
       resetForm();
-      fetchFatwas();
+      // Cache will be invalidated by RTK Query if we add mutations
+      window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error saving fatwa:", err);
       setError(err.response?.data?.message || "فشل في حفظ الفتوى");
@@ -104,7 +83,8 @@ const Fatwas = () => {
 
     try {
       await axiosInstance.delete(`fatwas/${fatwaId}/`);
-      fetchFatwas();
+      // Cache will be invalidated by RTK Query if we add mutations
+      window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error deleting fatwa:", err);
       setError("فشل في حذف الفتوى");
@@ -151,7 +131,11 @@ const Fatwas = () => {
         )}
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      {(error || fatwasError) && (
+        <div className="alert alert-danger">
+          {error || (fatwasError && String(fatwasError))}
+        </div>
+      )}
 
       <div className="search-box">
         <i className="ri-search-line"></i>
@@ -297,7 +281,11 @@ const Fatwas = () => {
                 />
               </div>
 
-              {error && <div className="alert alert-danger">{error}</div>}
+              {(error || fatwasError) && (
+        <div className="alert alert-danger">
+          {error || (fatwasError && String(fatwasError))}
+        </div>
+      )}
 
               <div className="modal-actions">
                 <button type="submit" className="btn btn-primary">

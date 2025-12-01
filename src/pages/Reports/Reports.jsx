@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import axiosInstance from "../../apis/axiosInstance";
+import React, { useState } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,6 +12,7 @@ import {
   Legend,
 } from "chart.js";
 import { Bar, Line, Pie } from "react-chartjs-2";
+import { useGetReportsSummaryQuery } from "../../services/api";
 import "./Reports.css";
 
 ChartJS.register(
@@ -28,36 +28,15 @@ ChartJS.register(
 );
 
 const Reports = () => {
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    cases: { total: 0, by_status: {} },
-    contracts: { total: 0, by_type: {} },
-    fatwas: { total: 0 },
-    investigations: { total: 0 },
-    appeals: { total: 0 },
-  });
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
-    try {
-      const res = await axiosInstance.get("reports/summary/");
-      // Backend يرجع: { cases, contracts, fatwas, investigations }
-      const data = res.data;
-      setStats({
-        cases: { total: data.cases || 0, by_status: {} },
-        contracts: { total: data.contracts || 0, by_type: {} },
-        fatwas: { total: data.fatwas || 0 },
-        investigations: { total: data.investigations || 0 },
-        appeals: { total: 0 },
-      });
-    } catch (err) {
-      console.error("Error fetching stats:", err);
-    } finally {
-      setLoading(false);
-    }
+  // Use cached query - data is automatically cached and reused
+  const { data: data, isLoading: loading, error } = useGetReportsSummaryQuery();
+  
+  const stats = {
+    cases: { total: data?.cases || 0, by_status: {} },
+    contracts: { total: data?.contracts || 0, by_type: {} },
+    fatwas: { total: data?.fatwas || 0 },
+    investigations: { total: data?.investigations || 0 },
+    appeals: { total: data?.appeals || 0 },
   };
 
   if (loading) {
