@@ -25,6 +25,8 @@ export default function Login() {
       const res = await axiosInstance.post("accounts/login/", formData);
       login(res.data.access, res.data.user);
       navigate("/");
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+
     } catch (err) {
       console.error(err);
       setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");

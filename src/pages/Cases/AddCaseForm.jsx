@@ -24,7 +24,9 @@ export default function AddCaseForm() {
   const divisionNameFromQuery = query.get("divisionName");
 
   const [realCourtName, setRealCourtName] = useState(courtName || "");
-  const [realDivisionName, setRealDivisionName] = useState(divisionNameFromQuery || "");
+  const [realDivisionName, setRealDivisionName] = useState(
+    divisionNameFromQuery || ""
+  );
 
   const isEdit = Boolean(caseId);
 
@@ -118,7 +120,8 @@ export default function AddCaseForm() {
 
     if (!isEdit) {
       formToSend.append("court", courtId);
-      if (divisionNameFromQuery) formToSend.append("division_name", divisionNameFromQuery);
+      if (divisionNameFromQuery)
+        formToSend.append("division_name", divisionNameFromQuery);
     }
 
     try {
@@ -141,35 +144,91 @@ export default function AddCaseForm() {
 
   return (
     <div className="add-case-container">
-      <h2>{isEdit ? "تعديل قضية" : "إضافة قضية"} - {realCourtName}</h2>
+      <h2>
+        {isEdit ? "تعديل قضية" : "إضافة قضية"} - {realCourtName}
+      </h2>
 
       <form onSubmit={handleSubmit} className="case-form">
         <label>تاريخ ورود الدعوى</label>
-        <input type="date" name="date_received" value={formData.date_received} onChange={handleChange} required />
+        <input
+          type="date"
+          name="date_received"
+          value={formData.date_received}
+          onChange={handleChange}
+          required
+        />
 
         <label>رقم الحصر العام</label>
-        <input type="text" name="general_number" value={formData.general_number} onChange={handleChange} required />
+        <input
+          type="text"
+          name="general_number"
+          value={formData.general_number}
+          onChange={handleChange}
+          required
+        />
 
         <label>رقم حصر القضايا</label>
-        <input type="text" name="case_number" value={formData.case_number} onChange={handleChange} required />
+        <input
+          type="text"
+          name="case_number"
+          value={formData.case_number}
+          onChange={handleChange}
+          required
+        />
 
         <label>رقم الدعوى والسنة القضائية</label>
-        <input type="text" name="lawsuit_number" value={formData.lawsuit_number} onChange={handleChange} required />
+        <input
+          type="text"
+          name="lawsuit_number"
+          value={formData.lawsuit_number}
+          onChange={handleChange}
+          required
+        />
 
         <label>المحكمة المرفوع أمامها الدعوى</label>
-        <input type="text" disabled value={realDivisionName ? `${realCourtName} - ${realDivisionName}` : realCourtName} style={{ background: "#eee", color: "#777" }} />
+        <input
+          type="text"
+          disabled
+          value={
+            realDivisionName
+              ? `${realCourtName} - ${realDivisionName}`
+              : realCourtName
+          }
+          style={{ background: "#eee", color: "#777" }}
+        />
 
         <label>اسم المدعي</label>
-        <input type="text" name="plaintiff" value={formData.plaintiff} onChange={handleChange} required />
+        <input
+          type="text"
+          name="plaintiff"
+          value={formData.plaintiff}
+          onChange={handleChange}
+          required
+        />
 
         <label>اسم المدعى عليه</label>
-        <input type="text" name="defendant" value={formData.defendant} onChange={handleChange} required />
+        <input
+          type="text"
+          name="defendant"
+          value={formData.defendant}
+          onChange={handleChange}
+          required
+        />
 
         <label>الطلبات</label>
-        <textarea name="requests" value={formData.requests} onChange={handleChange}></textarea>
+        <textarea
+          name="requests"
+          value={formData.requests}
+          onChange={handleChange}
+        ></textarea>
 
         <label>تاريخ الجلسات</label>
-        <input type="date" name="hearing_dates" value={formData.hearing_dates} onChange={handleChange} />
+        <input
+          type="date"
+          name="hearing_dates"
+          value={formData.hearing_dates}
+          onChange={handleChange}
+        />
 
         <label class="group-title">الحكم الصادر ف الدعوى</label>
         <div className="radio-group">
@@ -179,7 +238,9 @@ export default function AddCaseForm() {
               name="ruling"
               value="for_university"
               checked={formData.ruling === "for_university"}
-              onChange={(e) => setFormData({ ...formData, ruling: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, ruling: e.target.value })
+              }
             />
             <span>لصالح الجامعة</span>
           </label>
@@ -190,7 +251,9 @@ export default function AddCaseForm() {
               name="ruling"
               value="against_university"
               checked={formData.ruling === "against_university"}
-              onChange={(e) => setFormData({ ...formData, ruling: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, ruling: e.target.value })
+              }
             />
             <span>ضد الجامعة</span>
           </label>
@@ -205,7 +268,9 @@ export default function AddCaseForm() {
               name="appeal_status"
               value="true"
               checked={formData.appeal_status === "true"}
-              onChange={(e) => setFormData({ ...formData, appeal_status: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, appeal_status: e.target.value })
+              }
             />
             <span>تم الطعن</span>
           </label>
@@ -216,37 +281,60 @@ export default function AddCaseForm() {
               name="appeal_status"
               value="false"
               checked={formData.appeal_status === "false"}
-              onChange={(e) => setFormData({ ...formData, appeal_status: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, appeal_status: e.target.value })
+              }
             />
             <span>لم يتم الطعن</span>
           </label>
         </div>
 
-
-
         <label>حالة القضية</label>
-        <select name="case_status" value={formData.case_status} onChange={handleChange}>
+        <select
+          name="case_status"
+          value={formData.case_status}
+          onChange={handleChange}
+        >
           <option value="">اختيار...</option>
-          {CASE_STATUS_CHOICES.map(c => (
-            <option key={c.value} value={c.value}>{c.label}</option>
+          {CASE_STATUS_CHOICES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
           ))}
         </select>
 
         <label>تاريخ الحفظ</label>
-        <input type="date" name="saved_date" value={formData.saved_date} onChange={handleChange} />
+        <input
+          type="date"
+          name="saved_date"
+          value={formData.saved_date}
+          onChange={handleChange}
+        />
 
         <label>ملاحظات الدعوى</label>
-        <textarea name="notes" value={formData.notes} onChange={handleChange}></textarea>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+        ></textarea>
 
         <label>ملف الدعوى</label>
         <input type="file" name="file" onChange={handleChange} />
 
         <div className="modal-actions">
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "جاري الحفظ..." : isEdit ? "حفظ التعديلات" : "حفظ القضية"}
+            {loading
+              ? "جاري الحفظ..."
+              : isEdit
+              ? "حفظ التعديلات"
+              : "حفظ القضية"}
           </button>
 
-          <button type="button" className="btn btn-secondary" onClick={() => navigate("/cases")}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => navigate("/cases")}
+          >
             إلغاء
           </button>
         </div>

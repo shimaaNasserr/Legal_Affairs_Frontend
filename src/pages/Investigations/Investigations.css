@@ -1,5 +1,5 @@
 /* Investigations Page - Premium Modern Design */
-@import '../../styles/global.css';
+@import "../../styles/global.css";
 
 .investigations-page {
   padding: 0;
@@ -25,7 +25,7 @@
 }
 
 .investigation-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   right: 0;
@@ -159,6 +159,66 @@
 
 .large-modal {
   max-width: 900px;
+  position: relative; /* Needed for loading overlay positioning */
+}
+
+/* Form Loading Overlay */
+.form-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: var(--radius-xl);
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: var(--primary-color);
+}
+
+.loading-spinner i {
+  font-size: 2.5rem;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner p {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Disabled form inputs */
+.investigation-form input:disabled,
+.investigation-form textarea:disabled,
+.investigation-form select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--bg-tertiary);
+}
+
+.investigation-form button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* Responsive */
@@ -166,11 +226,11 @@
   .investigations-list {
     grid-template-columns: 1fr;
   }
-  
+
   .investigation-card {
     padding: 1.5rem;
   }
-  
+
   .large-modal {
     max-width: 100%;
   }

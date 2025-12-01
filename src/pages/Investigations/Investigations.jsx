@@ -1,20 +1,25 @@
 import React, { useState, useEffect, useContext } from "react";
 import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
+import {
+  useGetInvestigationsQuery,
+  useGetInvestigationByIdQuery,
+  useCreateInvestigationMutation,
+  useUpdateInvestigationMutation,
+  useDeleteInvestigationMutation,
+} from "../../services/api";
 import "./Investigations.css";
 
 const Investigations = () => {
   const { user } = useContext(AuthContext);
-  const [investigations, setInvestigations] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingInvestigation, setEditingInvestigation] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    accused_names_input: [],
+    accused_names_input: "",
     date_received: "",
     date_started: "",
     date_completed: "",
@@ -34,10 +39,183 @@ const Investigations = () => {
   });
   const [error, setError] = useState("");
 
+  // Use cached query - data is automatically cached and reused
+  const {
+    data: investigations = [],
+    isLoading: loading,
+    error: queryError,
+  } = useGetInvestigationsQuery();
+
+  // Fetch full investigation details when editing
+  const { data: fullInvestigationData, isLoading: loadingFullData } =
+    useGetInvestigationByIdQuery(editingInvestigation?.id, {
+      skip: !editingInvestigation?.id, // Skip if not editing
+    });
+
+  const [createInvestigation, { isLoading: isCreating }] =
+    useCreateInvestigationMutation();
+  const [updateInvestigation, { isLoading: isUpdating }] =
+    useUpdateInvestigationMutation();
+  const [deleteInvestigation] = useDeleteInvestigationMutation();
+
+  // Combined loading state for form operations
+  const isFormLoading = loadingFullData || isCreating || isUpdating;
+
+  // Helper function to format date for HTML date input (YYYY-MM-DD)
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return "";
+
+    // If already in YYYY-MM-DD format, return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return dateString;
+    }
+
+    // Try to parse various date formats
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "";
+
+      // Format as YYYY-MM-DD
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    } catch (err) {
+      console.warn("Error formatting date:", dateString, err);
+      return "";
+    }
+  };
+
+  // Helper function to parse accused_names_list from malformed backend format
+  const parseAccusedNamesList = (accusedNamesList) => {
+    if (!accusedNamesList) return [];
+    if (!Array.isArray(accusedNamesList)) return [];
+    if (accusedNamesList.length === 0) return [];
+
+    const firstItem = accusedNamesList[0];
+    const lastItem = accusedNamesList[accusedNamesList.length - 1];
+
+    if (
+      typeof firstItem === "string" &&
+      typeof lastItem === "string" &&
+      (firstItem.startsWith("['") || firstItem.startsWith('["')) &&
+      (lastItem.endsWith("']") || lastItem.endsWith('"]'))
+    ) {
+      const allNames = accusedNamesList
+        .map((item, index) => {
+          if (typeof item !== "string") return null;
+          let cleaned = item;
+          if (index === 0) {
+            cleaned = cleaned.replace(/^\[['"]/, "");
+          }
+          if (index === accusedNamesList.length - 1) {
+            cleaned = cleaned.replace(/['"]\]$/, "");
+          }
+          cleaned = cleaned.replace(/^['"]|['"]$/g, "");
+          return cleaned.trim();
+        })
+        .filter((name) => name && name.length > 0);
+      return allNames;
+    }
+
+    if (
+      typeof firstItem === "string" &&
+      firstItem.startsWith("[") &&
+      firstItem.endsWith("]") &&
+      accusedNamesList.length === 1
+    ) {
+      try {
+        const cleaned = firstItem.replace(/^\[|\]$/g, "").replace(/['"]/g, "");
+        const names = cleaned
+          .split(",")
+          .map((name) => name.trim())
+          .filter((name) => name);
+        return names;
+      } catch (err) {
+        console.warn("Error parsing accused_names_list:", err);
+      }
+    }
+
+    return accusedNamesList.filter(
+      (item) => item && typeof item === "string" && item.trim().length > 0
+    );
+  };
+
   useEffect(() => {
-    fetchInvestigations();
     fetchDepartments();
   }, []);
+
+  // Effect to populate form when full investigation data is loaded
+  useEffect(() => {
+    if (fullInvestigationData && editingInvestigation) {
+      const investigation = fullInvestigationData; // Use full data from API
+
+      // Parse accused_names_list if available, otherwise use accused_names
+      let accusedNames = [];
+
+      if (investigation.accused_names_list) {
+        accusedNames = parseAccusedNamesList(investigation.accused_names_list);
+      } else if (investigation.accused_names) {
+        if (typeof investigation.accused_names === "string") {
+          accusedNames = investigation.accused_names
+            .split(/[,،]/)
+            .map((name) => name.trim())
+            .filter((name) => name);
+        } else if (Array.isArray(investigation.accused_names)) {
+          accusedNames = investigation.accused_names;
+        }
+      }
+
+      const accusedNamesInput =
+        Array.isArray(accusedNames) && accusedNames.length > 0
+          ? accusedNames.join(", ")
+          : "";
+
+      const description = investigation.description ?? investigation.desc ?? "";
+
+      const newFormData = {
+        title: investigation.title ?? "",
+        description: String(description),
+        accused_names_input: accusedNamesInput,
+        date_received: formatDateForInput(investigation.date_received),
+        date_started: formatDateForInput(investigation.date_started),
+        date_completed: formatDateForInput(investigation.date_completed),
+        status: investigation.status ?? "pending",
+        priority: investigation.priority ?? "medium",
+        case_type: investigation.case_type ?? "internal_disciplinary",
+        complainant_type: investigation.complainant_type ?? "",
+        complainant_name: investigation.complainant_name ?? "",
+        complainant_id: investigation.complainant_id ?? "",
+        faculty_college: investigation.faculty_college ?? "",
+        notes: investigation.notes ?? "",
+        findings: investigation.findings ?? "",
+        recommendations: investigation.recommendations ?? "",
+        department:
+          investigation.department == null
+            ? ""
+            : typeof investigation.department === "object"
+            ? investigation.department?.id ?? ""
+            : String(investigation.department),
+        assigned_investigators:
+          investigation.assigned_investigators_details?.map((i) => i.id) ??
+          investigation.assigned_investigators ??
+          [],
+        file: null,
+      };
+
+      console.log("Editing investigation - Full API data:", {
+        description: investigation.description,
+        accused_names_list: investigation.accused_names_list,
+        accused_names: investigation.accused_names,
+      });
+      console.log("Editing investigation - Parsed form data:", {
+        description: newFormData.description,
+        accused_names_input: newFormData.accused_names_input,
+      });
+
+      setFormData(newFormData);
+    }
+  }, [fullInvestigationData, editingInvestigation]);
 
   const fetchDepartments = async () => {
     try {
@@ -48,25 +226,12 @@ const Investigations = () => {
     }
   };
 
-  const fetchInvestigations = async () => {
-    try {
-      const res = await axiosInstance.get("investigations/");
-      setInvestigations(res.data);
-    } catch (err) {
-      console.error("Error fetching investigations:", err);
-      setError("فشل في تحميل التحقيقات");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleChange = (e) => {
     if (e.target.name === "file") {
       setFormData({ ...formData, file: e.target.files[0] });
     } else if (e.target.name === "accused_names_input") {
-      // معالجة أسماء المتهمين كقائمة
-      const names = e.target.value.split(',').map(n => n.trim()).filter(n => n);
-      setFormData({ ...formData, accused_names_input: names });
+      // معالجة أسماء المتهمين كقائمة (تدعم الفاصلة العربية والإنجليزية)
+      setFormData({ ...formData, accused_names_input: e.target.value });
     } else {
       setFormData({ ...formData, [e.target.name]: e.target.value });
     }
@@ -84,13 +249,14 @@ const Investigations = () => {
             submitData.append("file", formData.file);
           }
         } else if (key === "accused_names_input") {
-          // إرسال أسماء المتهمين كقائمة
-          formData.accused_names_input.forEach(name => {
-            submitData.append("accused_names_input", name);
-          });
+          const names = String(formData.accused_names_input || "")
+            .split(/[,،]/)
+            .map((n) => n.trim())
+            .filter((n) => n);
+          submitData.append("accused_names", names.join(","));
         } else if (key === "assigned_investigators") {
           // إرسال المحققين كقائمة
-          formData.assigned_investigators.forEach(investigatorId => {
+          formData.assigned_investigators.forEach((investigatorId) => {
             submitData.append("assigned_investigators", investigatorId);
           });
         } else if (formData[key] !== null && formData[key] !== "") {
@@ -99,60 +265,35 @@ const Investigations = () => {
       });
 
       if (editingInvestigation) {
-        await axiosInstance.put(
-          `investigations/${editingInvestigation.id}/`,
-          submitData,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
+        await updateInvestigation({
+          id: editingInvestigation.id,
+          formData: submitData,
+        }).unwrap();
       } else {
-        await axiosInstance.post("investigations/", submitData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await createInvestigation(submitData).unwrap();
       }
       setShowModal(false);
       setEditingInvestigation(null);
       resetForm();
-      fetchInvestigations();
+      // Cache is automatically invalidated and refetched by RTK Query
     } catch (err) {
       console.error("Error saving investigation:", err);
-      setError(err.response?.data?.message || "فشل في حفظ التحقيق");
+      setError(err.data?.message || err.message || "فشل في حفظ التحقيق");
     }
   };
 
   const handleEdit = (investigation) => {
     setEditingInvestigation(investigation);
-    setFormData({
-      title: investigation.title || "",
-      description: investigation.description || "",
-      accused_names_input: investigation.accused_names_list || [],
-      date_received: investigation.date_received || "",
-      date_started: investigation.date_started || "",
-      date_completed: investigation.date_completed || "",
-      status: investigation.status || "pending",
-      priority: investigation.priority || "medium",
-      case_type: investigation.case_type || "internal_disciplinary",
-      complainant_type: investigation.complainant_type || "",
-      complainant_name: investigation.complainant_name || "",
-      complainant_id: investigation.complainant_id || "",
-      faculty_college: investigation.faculty_college || "",
-      notes: investigation.notes || "",
-      findings: investigation.findings || "",
-      recommendations: investigation.recommendations || "",
-      department: investigation.department || "",
-      assigned_investigators: investigation.assigned_investigators_details?.map(i => i.id) || [],
-      file: null,
-    });
     setShowModal(true);
+    // Form will be populated by useEffect when fullInvestigationData loads
   };
 
   const handleDelete = async (investigationId) => {
     if (!window.confirm("هل أنت متأكد من حذف هذا التحقيق؟")) return;
 
     try {
-      await axiosInstance.delete(`investigations/${investigationId}/`);
-      fetchInvestigations();
+      await deleteInvestigation(investigationId).unwrap();
+      // Cache is automatically invalidated and refetched by RTK Query
     } catch (err) {
       console.error("Error deleting investigation:", err);
       setError("فشل في حذف التحقيق");
@@ -163,7 +304,7 @@ const Investigations = () => {
     setFormData({
       title: "",
       description: "",
-      accused_names_input: [],
+      accused_names_input: "",
       date_received: "",
       date_started: "",
       date_completed: "",
@@ -237,7 +378,11 @@ const Investigations = () => {
         )}
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      {(error || queryError) && (
+        <div className="alert alert-danger">
+          {error || queryError?.data?.message || "فشل في تحميل التحقيقات"}
+        </div>
+      )}
 
       <div className="search-box">
         <i className="ri-search-line"></i>
@@ -261,10 +406,14 @@ const Investigations = () => {
               <div className="card-header">
                 <h3>{investigation.title}</h3>
                 <div className="badges">
-                  <span className={`status-badge status-${investigation.status}`}>
+                  <span
+                    className={`status-badge status-${investigation.status}`}
+                  >
                     {getStatusName(investigation.status)}
                   </span>
-                  <span className={`priority-badge priority-${investigation.priority}`}>
+                  <span
+                    className={`priority-badge priority-${investigation.priority}`}
+                  >
                     {getPriorityName(investigation.priority)}
                   </span>
                 </div>
@@ -272,16 +421,24 @@ const Investigations = () => {
               <p className="description">{investigation.description}</p>
               <div className="card-details">
                 <span>
-                  <i className="ri-hashtag"></i> رقم التحقيق: {investigation.general_number || "-"}
+                  <i className="ri-hashtag"></i> رقم التحقيق:{" "}
+                  {investigation.general_number || "-"}
                 </span>
                 <span>
-                  <i className="ri-building-line"></i> {investigation.department_name || "-"}
+                  <i className="ri-building-line"></i>{" "}
+                  {investigation.department_name || "-"}
                 </span>
-                {investigation.accused_names_list && investigation.accused_names_list.length > 0 && (
-                  <span>
-                    <i className="ri-team-line"></i> المتهمون: {investigation.accused_names_list.join(", ")}
-                  </span>
-                )}
+                {(() => {
+                  const parsedNames = parseAccusedNamesList(
+                    investigation.accused_names_list
+                  );
+                  return parsedNames.length > 0 ? (
+                    <span>
+                      <i className="ri-team-line"></i> المتهمون:{" "}
+                      {parsedNames.join(", ")}
+                    </span>
+                  ) : null;
+                })()}
                 {investigation.file && (
                   <a
                     href={investigation.file}
@@ -318,7 +475,10 @@ const Investigations = () => {
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-content large-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h3>
                 {editingInvestigation ? "تعديل تحقيق" : "إضافة تحقيق جديد"}
@@ -326,10 +486,19 @@ const Investigations = () => {
               <button
                 className="close-btn"
                 onClick={() => setShowModal(false)}
+                disabled={isFormLoading}
               >
                 ×
               </button>
             </div>
+            {loadingFullData && (
+              <div className="form-loading-overlay">
+                <div className="loading-spinner">
+                  <i className="ri-loader-4-line"></i>
+                  <p>جاري تحميل البيانات...</p>
+                </div>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="investigation-form">
               <div className="form-group">
                 <label>عنوان التحقيق *</label>
@@ -339,6 +508,7 @@ const Investigations = () => {
                   value={formData.title}
                   onChange={handleChange}
                   required
+                  disabled={isFormLoading}
                 />
               </div>
 
@@ -350,6 +520,7 @@ const Investigations = () => {
                   onChange={handleChange}
                   rows="4"
                   required
+                  disabled={isFormLoading}
                 ></textarea>
               </div>
 
@@ -362,6 +533,7 @@ const Investigations = () => {
                     value={formData.date_received}
                     onChange={handleChange}
                     required
+                    disabled={isFormLoading}
                   />
                 </div>
 
@@ -372,6 +544,7 @@ const Investigations = () => {
                     value={formData.status}
                     onChange={handleChange}
                     required
+                    disabled={isFormLoading}
                   >
                     <option value="pending">قيد الانتظار</option>
                     <option value="under_investigation">قيد التحقيق</option>
@@ -392,6 +565,7 @@ const Investigations = () => {
                     value={formData.priority}
                     onChange={handleChange}
                     required
+                    disabled={isFormLoading}
                   >
                     <option value="low">منخفضة</option>
                     <option value="medium">متوسطة</option>
@@ -407,10 +581,13 @@ const Investigations = () => {
                     value={formData.case_type}
                     onChange={handleChange}
                     required
+                    disabled={isFormLoading}
                   >
                     <option value="against_university">ضد الجامعة</option>
                     <option value="by_university">مرفوعة من الجامعة</option>
-                    <option value="internal_disciplinary">تأديبية داخلية</option>
+                    <option value="internal_disciplinary">
+                      تأديبية داخلية
+                    </option>
                     <option value="academic_misconduct">مخالفة أكاديمية</option>
                     <option value="administrative">إدارية</option>
                   </select>
@@ -422,9 +599,10 @@ const Investigations = () => {
                 <input
                   type="text"
                   name="accused_names_input"
-                  value={formData.accused_names_input.join(", ")}
+                  value={formData.accused_names_input}
                   onChange={handleChange}
                   placeholder="اسم1, اسم2, اسم3"
+                  disabled={isFormLoading}
                 />
               </div>
 
@@ -435,6 +613,7 @@ const Investigations = () => {
                     name="complainant_type"
                     value={formData.complainant_type}
                     onChange={handleChange}
+                    disabled={isFormLoading}
                   >
                     <option value="">اختر النوع</option>
                     <option value="student">طالب</option>
@@ -452,6 +631,7 @@ const Investigations = () => {
                     name="complainant_name"
                     value={formData.complainant_name}
                     onChange={handleChange}
+                    disabled={isFormLoading}
                   />
                 </div>
               </div>
@@ -464,6 +644,7 @@ const Investigations = () => {
                     name="complainant_id"
                     value={formData.complainant_id}
                     onChange={handleChange}
+                    disabled={isFormLoading}
                   />
                 </div>
 
@@ -474,6 +655,7 @@ const Investigations = () => {
                     name="faculty_college"
                     value={formData.faculty_college}
                     onChange={handleChange}
+                    disabled={isFormLoading}
                   />
                 </div>
               </div>
@@ -486,6 +668,7 @@ const Investigations = () => {
                     name="date_started"
                     value={formData.date_started}
                     onChange={handleChange}
+                    disabled={isFormLoading}
                   />
                 </div>
 
@@ -496,6 +679,7 @@ const Investigations = () => {
                     name="date_completed"
                     value={formData.date_completed}
                     onChange={handleChange}
+                    disabled={isFormLoading}
                   />
                 </div>
               </div>
@@ -507,6 +691,7 @@ const Investigations = () => {
                   value={formData.notes}
                   onChange={handleChange}
                   rows="3"
+                  disabled={isFormLoading}
                 ></textarea>
               </div>
 
@@ -517,6 +702,7 @@ const Investigations = () => {
                   value={formData.findings}
                   onChange={handleChange}
                   rows="3"
+                  disabled={isFormLoading}
                 ></textarea>
               </div>
 
@@ -527,6 +713,7 @@ const Investigations = () => {
                   value={formData.recommendations}
                   onChange={handleChange}
                   rows="3"
+                  disabled={isFormLoading}
                 ></textarea>
               </div>
 
@@ -536,6 +723,7 @@ const Investigations = () => {
                   name="department"
                   value={formData.department}
                   onChange={handleChange}
+                  disabled={isFormLoading}
                 >
                   <option value="">اختر الإدارة</option>
                   {departments.map((dept) => (
@@ -553,19 +741,38 @@ const Investigations = () => {
                   name="file"
                   accept=".pdf"
                   onChange={handleChange}
+                  disabled={isFormLoading}
                 />
               </div>
 
               {error && <div className="alert alert-danger">{error}</div>}
 
               <div className="modal-actions">
-                <button type="submit" className="btn btn-primary">
-                  {editingInvestigation ? "تحديث" : "إضافة"}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isFormLoading}
+                >
+                  {isFormLoading ? (
+                    <>
+                      <i className="ri-loader-4-line"></i>{" "}
+                      {isCreating || isUpdating
+                        ? editingInvestigation
+                          ? "جاري التحديث..."
+                          : "جاري الإضافة..."
+                        : "جاري التحميل..."}
+                    </>
+                  ) : editingInvestigation ? (
+                    "تحديث"
+                  ) : (
+                    "إضافة"
+                  )}
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowModal(false)}
+                  disabled={isFormLoading}
                 >
                   إلغاء
                 </button>

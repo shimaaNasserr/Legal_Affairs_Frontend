@@ -1,13 +1,29 @@
-import React, { useState, useEffect, useContext } from "react";
-import axiosInstance from "../../apis/axiosInstance";
+import React, { useState, useContext } from "react";
 import { AuthContext } from "../../context/AuthContext";
+import {
+  useGetAppealsQuery,
+  useGetInvestigationsQuery,
+  useCreateAppealMutation,
+  useUpdateAppealMutation,
+  useDeleteAppealMutation,
+} from "../../services/api";
 import "./Appeals.css";
 
 const Appeals = () => {
   const { user } = useContext(AuthContext);
-  const [appeals, setAppeals] = useState([]);
-  const [investigations, setInvestigations] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Use cached queries - data is automatically cached and reused
+  const {
+    data: appeals = [],
+    isLoading: loading,
+    error: appealsError,
+  } = useGetAppealsQuery();
+  const { data: investigations = [] } = useGetInvestigationsQuery();
+
+  // Mutations with automatic cache invalidation
+  const [createAppeal, { isLoading: isCreating }] = useCreateAppealMutation();
+  const [updateAppeal, { isLoading: isUpdating }] = useUpdateAppealMutation();
+  const [deleteAppeal, { isLoading: isDeleting }] = useDeleteAppealMutation();
+
   const [showModal, setShowModal] = useState(false);
   const [editingAppeal, setEditingAppeal] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,32 +40,6 @@ const Appeals = () => {
     file: null,
   });
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetchAppeals();
-    fetchInvestigations();
-  }, []);
-
-  const fetchAppeals = async () => {
-    try {
-      const res = await axiosInstance.get("appeals/");
-      setAppeals(res.data);
-    } catch (err) {
-      console.error("Error fetching appeals:", err);
-      setError("فشل في تحميل التظلمات");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchInvestigations = async () => {
-    try {
-      const res = await axiosInstance.get("investigations/");
-      setInvestigations(res.data);
-    } catch (err) {
-      console.error("Error fetching investigations:", err);
-    }
-  };
 
   const handleChange = (e) => {
     if (e.target.name === "file") {
@@ -76,21 +66,20 @@ const Appeals = () => {
       });
 
       if (editingAppeal) {
-        await axiosInstance.put(`appeals/${editingAppeal.id}/`, submitData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await updateAppeal({
+          id: editingAppeal.id,
+          formData: submitData,
+        }).unwrap();
       } else {
-        await axiosInstance.post("appeals/", submitData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await createAppeal(submitData).unwrap();
       }
+      // Cache is automatically invalidated and refetched by RTK Query
       setShowModal(false);
       setEditingAppeal(null);
       resetForm();
-      fetchAppeals();
     } catch (err) {
       console.error("Error saving appeal:", err);
-      setError(err.response?.data?.message || "فشل في حفظ التظلم");
+      setError(err?.data?.message || err?.data?.detail || "فشل في حفظ التظلم");
     }
   };
 
@@ -115,11 +104,11 @@ const Appeals = () => {
     if (!window.confirm("هل أنت متأكد من حذف هذا التظلم؟")) return;
 
     try {
-      await axiosInstance.delete(`appeals/${appealId}/`);
-      fetchAppeals();
+      await deleteAppeal(appealId).unwrap();
+      // Cache is automatically invalidated and refetched by RTK Query
     } catch (err) {
       console.error("Error deleting appeal:", err);
-      setError("فشل في حذف التظلم");
+      setError(err?.data?.message || err?.data?.detail || "فشل في حذف التظلم");
     }
   };
 
@@ -153,7 +142,9 @@ const Appeals = () => {
     (appeal) =>
       appeal.appeal_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appeal.appellant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appeal.investigation_title?.toLowerCase().includes(searchTerm.toLowerCase())
+      appeal.investigation_title
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -180,7 +171,11 @@ const Appeals = () => {
         )}
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      {(error || appealsError) && (
+        <div className="alert alert-danger">
+          {error || appealsError?.data?.message || "فشل في تحميل التظلمات"}
+        </div>
+      )}
 
       <div className="search-box">
         <i className="ri-search"></i>
@@ -210,17 +205,21 @@ const Appeals = () => {
               <p className="description">{appeal.appeal_reason}</p>
               <div className="card-details">
                 <span>
-                  <i className="ri-hashtag"></i> رقم التظلم: {appeal.appeal_number || "-"}
+                  <i className="ri-hashtag"></i> رقم التظلم:{" "}
+                  {appeal.appeal_number || "-"}
                 </span>
                 {appeal.investigation_title && (
                   <span>
-                    <i className="ri-search"></i> مرتبط بالتحقيق: {appeal.investigation_title}
-                    {appeal.investigation_general_number && ` (${appeal.investigation_general_number})`}
+                    <i className="ri-search"></i> مرتبط بالتحقيق:{" "}
+                    {appeal.investigation_title}
+                    {appeal.investigation_general_number &&
+                      ` (${appeal.investigation_general_number})`}
                   </span>
                 )}
                 {appeal.department_name && (
                   <span>
-                    <i className="ri-building-line"></i> {appeal.department_name}
+                    <i className="ri-building-line"></i>{" "}
+                    {appeal.department_name}
                   </span>
                 )}
                 {appeal.file && (
@@ -262,10 +261,7 @@ const Appeals = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingAppeal ? "تعديل تظلم" : "إضافة تظلم جديد"}</h3>
-              <button
-                className="close-btn"
-                onClick={() => setShowModal(false)}
-              >
+              <button className="close-btn" onClick={() => setShowModal(false)}>
                 ×
               </button>
             </div>
@@ -394,13 +390,22 @@ const Appeals = () => {
               {error && <div className="alert alert-danger">{error}</div>}
 
               <div className="modal-actions">
-                <button type="submit" className="btn btn-primary">
-                  {editingAppeal ? "تحديث" : "إضافة"}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isCreating || isUpdating}
+                >
+                  {isCreating || isUpdating
+                    ? "جاري الحفظ..."
+                    : editingAppeal
+                    ? "تحديث"
+                    : "إضافة"}
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowModal(false)}
+                  disabled={isCreating || isUpdating}
                 >
                   إلغاء
                 </button>

@@ -3,7 +3,11 @@ import { Navigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { user, accessToken } = useContext(AuthContext);
+  const { user, accessToken, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return <div>جارٍ التحميل...</div>;
+  }
 
   if (!accessToken || !user) {
     return <Navigate to="/login" replace />;
@@ -17,5 +21,3 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 };
 
 export default ProtectedRoute;
-
-

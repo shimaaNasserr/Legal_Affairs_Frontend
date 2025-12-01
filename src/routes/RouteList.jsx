@@ -61,7 +61,7 @@ const route = createBrowserRouter([
         element: <Cases />,
       },
       {
-        path: "select-court" ,
+        path: "select-court",
         element: <SelectCourt />,
       },
       {

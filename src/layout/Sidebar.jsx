@@ -29,7 +29,11 @@ const Sidebar = () => {
         { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" },
         { to: "/contracts", icon: "ri-file-text-line", label: "العقود" },
         { to: "/fatwas", icon: "ri-book-open-line", label: "الفتاوى" },
-        { to: "/reports", icon: "ri-bar-chart-line", label: "التقارير والإحصائيات" }
+        {
+          to: "/reports",
+          icon: "ri-bar-chart-line",
+          label: "التقارير والإحصائيات",
+        }
       );
     }
     // مدير إدارة: قضايا و تحقيقات و تظلمات إدارته فقط
