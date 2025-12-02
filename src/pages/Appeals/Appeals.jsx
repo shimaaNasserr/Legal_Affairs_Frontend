@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import {
   useGetAppealsQuery,
@@ -11,12 +11,44 @@ import "./Appeals.css";
 
 const Appeals = () => {
   const { user } = useContext(AuthContext);
-  // Use cached queries - data is automatically cached and reused
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [pageSize] = useState(5);
+  // Fetch all items for client-side pagination and filtering
   const {
-    data: appeals = [],
+    data: appealsResponse,
     isLoading: loading,
     error: appealsError,
-  } = useGetAppealsQuery();
+  } = useGetAppealsQuery({
+    page_size: 1000, // Fetch a large number to get all items
+  });
+
+  // Handle both paginated and non-paginated responses
+  const allAppeals = appealsResponse?.results || appealsResponse || [];
+
+  // Filter appeals based on search term
+  const filteredAppeals = allAppeals.filter(
+    (appeal) =>
+      appeal.appeal_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appeal.appellant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appeal.investigation_title
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase())
+  );
+
+  // Calculate pagination based on filtered results
+  const totalCount = filteredAppeals.length;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Get items for current page (slice filtered results)
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const appeals = filteredAppeals.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
   const { data: investigations = [] } = useGetInvestigationsQuery();
 
   // Mutations with automatic cache invalidation
@@ -26,7 +58,7 @@ const Appeals = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [editingAppeal, setEditingAppeal] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+
   const [formData, setFormData] = useState({
     investigation: "",
     appeal_number: "",
@@ -77,7 +109,9 @@ const Appeals = () => {
       }
       const labelPath = path
         .map((segment) =>
-          /^\d+$/.test(segment) ? `البند ${Number(segment) + 1}` : labelize(segment)
+          /^\d+$/.test(segment)
+            ? `البند ${Number(segment) + 1}`
+            : labelize(segment)
         )
         .join(" → ");
       return [
@@ -93,8 +127,7 @@ const Appeals = () => {
 
     const fieldErrors = Object.entries(data)
       .filter(
-        ([key]) =>
-          !["detail", "message", "non_field_errors"].includes(key)
+        ([key]) => !["detail", "message", "non_field_errors"].includes(key)
       )
       .flatMap(([field, value]) => collectMessages(value, [field]));
 
@@ -223,15 +256,6 @@ const Appeals = () => {
     return statusNames[status] || status;
   };
 
-  const filteredAppeals = appeals.filter(
-    (appeal) =>
-      appeal.appeal_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appeal.appellant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appeal.investigation_title
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase())
-  );
-
   if (loading) {
     return <div className="loading">جاري التحميل...</div>;
   }
@@ -283,13 +307,13 @@ const Appeals = () => {
       </div>
 
       <div className="appeals-list">
-        {filteredAppeals.length === 0 ? (
+        {appeals.length === 0 ? (
           <div className="empty-state">
             <i className="ri-inbox-line"></i>
             <p>لا توجد تظلمات</p>
           </div>
         ) : (
-          filteredAppeals.map((appeal) => (
+          appeals.map((appeal) => (
             <div key={appeal.id} className="appeal-card">
               <div className="card-header">
                 <h3>{appeal.appellant_name}</h3>
@@ -350,6 +374,46 @@ const Appeals = () => {
           ))
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div
+          className="pagination-controls"
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            marginTop: "2rem",
+            padding: "1rem",
+            borderTop: "1px solid #e0e0e0",
+            gap: "0.5rem",
+          }}
+        >
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+            (pageNum) => (
+              <button
+                key={pageNum}
+                className={`btn btn-sm ${
+                  currentPage === pageNum
+                    ? "btn-primary"
+                    : "btn-outline-secondary"
+                }`}
+                onClick={() => setCurrentPage(pageNum)}
+                style={{
+                  minWidth: "40px",
+                  height: "40px",
+                  padding: "0.5rem",
+                  borderRadius: "4px",
+                  border: "1px solid #ddd",
+                  cursor: "pointer",
+                }}
+              >
+                {pageNum}
+              </button>
+            )
+          )}
+        </div>
+      )}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>

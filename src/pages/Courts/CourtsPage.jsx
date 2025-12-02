@@ -1,25 +1,11 @@
-import React, { useState, useEffect } from "react";
-import axiosInstance from "../../apis/axiosInstance";
+import React from "react";
+import { useGetCourtsQuery } from "../../services/api";
 
 export default function CourtsPage({ onSelectCourt }) {
-  const [courts, setCourts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function fetchCourts() {
-      try {
-        const res = await axiosInstance.get("/courts/");
-        setCourts(res.data);
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError("حدث خطأ أثناء جلب بيانات المحاكم");
-        setLoading(false);
-      }
-    }
-    fetchCourts();
-  }, []);
+  // Use cached query - data is automatically cached and reused
+  const { data: courtsData, isLoading: loading, error: queryError } = useGetCourtsQuery();
+  const courts = courtsData?.results || courtsData || [];
+  const error = queryError ? "حدث خطأ أثناء جلب بيانات المحاكم" : "";
 
   if (loading) return <p>جاري تحميل المحاكم...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;

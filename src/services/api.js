@@ -25,7 +25,7 @@ const baseQuery = async (args, api, extraOptions) => {
 export const api = createApi({
   reducerPath: "api",
   baseQuery: baseQuery,
-  tagTypes: ["Investigations", "Appeals"],
+  tagTypes: ["Investigations", "Appeals", "Cases", "Contracts", "Courts", "Departments", "Fatwas", "Users", "Reports"],
   endpoints: (builder) => ({
     // Investigations endpoints
     getInvestigations: builder.query({
@@ -81,10 +81,17 @@ export const api = createApi({
 
     // Appeals endpoints
     getAppeals: builder.query({
-      query: (params = {}) => ({
-        url: "appeals/",
-        params,
-      }),
+      query: (params = {}) => {
+        const cleaned = Object.fromEntries(
+          Object.entries(params || {}).filter(
+            ([_, v]) => v !== undefined && v !== null && String(v).trim() !== ""
+          )
+        );
+        return {
+          url: "appeals/",
+          params: cleaned,
+        };
+      },
       providesTags: ["Appeals"],
       // Cache for 5 minutes
       keepUnusedDataFor: 300,
@@ -123,6 +130,93 @@ export const api = createApi({
       }),
       invalidatesTags: ["Appeals"],
     }),
+
+    // Cases endpoints
+    getCases: builder.query({
+      query: (params = {}) => ({
+        url: "cases/",
+        params,
+      }),
+      providesTags: ["Cases"],
+      keepUnusedDataFor: 300,
+    }),
+    getCaseById: builder.query({
+      query: (id) => `cases/${id}/`,
+      providesTags: (result, error, id) => [{ type: "Cases", id }],
+      keepUnusedDataFor: 300,
+    }),
+
+    // Contracts endpoints
+    getContracts: builder.query({
+      query: (params = {}) => ({
+        url: "contracts/",
+        params,
+      }),
+      providesTags: ["Contracts"],
+      keepUnusedDataFor: 300,
+    }),
+    getContractById: builder.query({
+      query: (id) => `contracts/${id}/`,
+      providesTags: (result, error, id) => [{ type: "Contracts", id }],
+      keepUnusedDataFor: 300,
+    }),
+
+    // Courts endpoints
+    getCourts: builder.query({
+      query: () => ({
+        url: "courts/",
+      }),
+      providesTags: ["Courts"],
+      keepUnusedDataFor: 300,
+    }),
+
+    // Departments endpoints
+    getDepartments: builder.query({
+      query: () => ({
+        url: "departments/",
+      }),
+      providesTags: ["Departments"],
+      keepUnusedDataFor: 300,
+    }),
+
+    // Fatwas endpoints
+    getFatwas: builder.query({
+      query: (params = {}) => ({
+        url: "fatwas/",
+        params,
+      }),
+      providesTags: ["Fatwas"],
+      keepUnusedDataFor: 300,
+    }),
+    getFatwaById: builder.query({
+      query: (id) => `fatwas/${id}/`,
+      providesTags: (result, error, id) => [{ type: "Fatwas", id }],
+      keepUnusedDataFor: 300,
+    }),
+
+    // Users endpoints
+    getUsers: builder.query({
+      query: (params = {}) => ({
+        url: "accounts/users/",
+        params,
+      }),
+      providesTags: ["Users"],
+      keepUnusedDataFor: 300,
+    }),
+    getUserById: builder.query({
+      query: (id) => `accounts/users/${id}/`,
+      providesTags: (result, error, id) => [{ type: "Users", id }],
+      keepUnusedDataFor: 300,
+    }),
+
+    // Reports endpoints
+    getReportsSummary: builder.query({
+      query: () => ({
+        url: "reports/summary/",
+      }),
+      providesTags: ["Reports"],
+      keepUnusedDataFor: 300,
+    }),
   }),
 });
 
@@ -138,4 +232,15 @@ export const {
   useCreateAppealMutation,
   useUpdateAppealMutation,
   useDeleteAppealMutation,
+  useGetCasesQuery,
+  useGetCaseByIdQuery,
+  useGetContractsQuery,
+  useGetContractByIdQuery,
+  useGetCourtsQuery,
+  useGetDepartmentsQuery,
+  useGetFatwasQuery,
+  useGetFatwaByIdQuery,
+  useGetUsersQuery,
+  useGetUserByIdQuery,
+  useGetReportsSummaryQuery,
 } = api;

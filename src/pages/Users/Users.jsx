@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useContext } from "react";
 import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
+import { useGetUsersQuery, useGetDepartmentsQuery, useGetUserByIdQuery } from "../../services/api";
 import "./Users.css";
 
 const Users = () => {
   const { user: currentUser } = useContext(AuthContext);
-  const [users, setUsers] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
@@ -21,36 +19,11 @@ const Users = () => {
   });
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchUsers();
-    fetchDepartments();
-  }, []);
-
-  const fetchDepartments = async () => {
-    try {
-      const res = await axiosInstance.get("departments/");
-      setDepartments(res.data);
-    } catch (err) {
-      console.error("Error fetching departments:", err);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      setError("");
-      const res = await axiosInstance.get("accounts/users/");
-      // ViewSet returns data in results array if paginated, or directly as array
-      const usersData = res.data.results || res.data;
-      setUsers(Array.isArray(usersData) ? usersData : []);
-    } catch (err) {
-      console.error("Error fetching users:", err);
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || "فشل في تحميل المستخدمين";
-      setError(errorMessage);
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use cached queries - data is automatically cached and reused
+  const { data: usersData, isLoading: loading, error: usersError } = useGetUsersQuery();
+  const { data: departments = [] } = useGetDepartmentsQuery();
+  
+  const users = usersData?.results || usersData || [];
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -88,7 +61,8 @@ const Users = () => {
       setShowModal(false);
       setEditingUser(null);
       resetForm();
-      fetchUsers();
+      // Cache will be invalidated by RTK Query if we add mutations
+      window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error saving user:", err);
       setError(err.response?.data?.message || "فشل في حفظ المستخدم");
@@ -131,7 +105,8 @@ const Users = () => {
 
     try {
       await axiosInstance.delete(`accounts/users/${userId}/`);
-      fetchUsers();
+      // Cache will be invalidated by RTK Query if we add mutations
+      window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error deleting user:", err);
       setError("فشل في حذف المستخدم");
@@ -181,10 +156,10 @@ const Users = () => {
         </button>
       </div>
 
-      {error && (
+      {(error || usersError) && (
         <div className="alert alert-danger">
           <i className="ri-error-warning-line"></i>
-          {error}
+          {error || (usersError && String(usersError))}
         </div>
       )}
 

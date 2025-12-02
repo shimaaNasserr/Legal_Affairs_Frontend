@@ -16,6 +16,13 @@ const Investigations = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingInvestigation, setEditingInvestigation] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(5);
+
+  // Reset to page 1 when search term changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -124,12 +131,35 @@ const Investigations = () => {
     return allMessages.length === 1 ? allMessages[0] : allMessages;
   };
 
-  // Use cached query - data is automatically cached and reused
+  // Fetch all items for client-side pagination and filtering
   const {
-    data: investigations = [],
+    data: investigationsResponse,
     isLoading: loading,
     error: queryError,
-  } = useGetInvestigationsQuery();
+  } = useGetInvestigationsQuery({
+    page_size: 1000, // Fetch a large number to get all items
+  });
+
+  // Handle both paginated and non-paginated responses
+  const allInvestigations =
+    investigationsResponse?.results || investigationsResponse || [];
+
+  // Filter investigations based on search term
+  const filteredInvestigations = allInvestigations.filter(
+    (inv) =>
+      inv.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inv.general_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inv.complainant_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Calculate pagination based on filtered results
+  const totalCount = filteredInvestigations.length;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Get items for current page (slice filtered results)
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const investigations = filteredInvestigations.slice(startIndex, endIndex);
 
   // Fetch full investigation details when editing
   const { data: fullInvestigationData, isLoading: loadingFullData } =
@@ -432,13 +462,6 @@ const Investigations = () => {
     return priorityNames[priority] || priority;
   };
 
-  const filteredInvestigations = investigations.filter(
-    (inv) =>
-      inv.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.general_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.complainant_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   if (loading) {
     return <div className="loading">جاري التحميل...</div>;
   }
@@ -490,13 +513,13 @@ const Investigations = () => {
       </div>
 
       <div className="investigations-list">
-        {filteredInvestigations.length === 0 ? (
+        {investigations.length === 0 ? (
           <div className="empty-state">
             <i className="ri-inbox-line"></i>
             <p>لا توجد تحقيقات</p>
           </div>
         ) : (
-          filteredInvestigations.map((investigation) => (
+          investigations.map((investigation) => (
             <div key={investigation.id} className="investigation-card">
               <div className="card-header">
                 <h3>{investigation.title}</h3>
@@ -567,6 +590,46 @@ const Investigations = () => {
           ))
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div
+          className="pagination-controls"
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            marginTop: "2rem",
+            padding: "1rem",
+            borderTop: "1px solid #e0e0e0",
+            gap: "0.5rem",
+          }}
+        >
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+            (pageNum) => (
+              <button
+                key={pageNum}
+                className={`btn btn-sm ${
+                  currentPage === pageNum
+                    ? "btn-primary"
+                    : "btn-outline-secondary"
+                }`}
+                onClick={() => setCurrentPage(pageNum)}
+                style={{
+                  minWidth: "40px",
+                  height: "40px",
+                  padding: "0.5rem",
+                  borderRadius: "4px",
+                  border: "1px solid #ddd",
+                  cursor: "pointer",
+                }}
+              >
+                {pageNum}
+              </button>
+            )
+          )}
+        </div>
+      )}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
