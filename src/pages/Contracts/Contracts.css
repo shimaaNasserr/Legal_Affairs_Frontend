@@ -1,0 +1,126 @@
+/* Contracts Page - Premium Modern Design */
+@import '../../styles/global.css';
+
+.contracts-page {
+  padding: 0;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.contracts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.contract-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.contract-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--info) 0%, #2563eb 100%);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.contract-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--info);
+}
+
+.contract-card:hover::before {
+  opacity: 0.6;
+}
+
+/* Card state accents */
+.contract-card.expiring {
+  border-color: #f59e0b; /* amber */
+}
+.contract-card.expiring::before {
+  background: linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%);
+  opacity: 0.5;
+}
+.contract-card.expired {
+  border-color: #ef4444; /* red */
+}
+.contract-card.expired::before {
+  background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+  opacity: 0.5;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.badges-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+.status-badge.expiring {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.status-badge.expired {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.status-badge.urgent {
+  background: rgba(220, 38, 38, 0.18);
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.contract-card.urgent {
+  border: 2px solid rgba(220, 38, 38, 0.35);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.type-badge {
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--radius-xl);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--info);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .contracts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .contract-card {
+    padding: 1.5rem;
+  }
+}
