@@ -9,6 +9,8 @@ const Fatwas = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingFatwa, setEditingFatwa] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [formData, setFormData] = useState({
     request_content: "",
     result: "",
@@ -17,11 +19,12 @@ const Fatwas = () => {
   });
   const [error, setError] = useState("");
 
-  // Use cached queries - data is automatically cached and reused
-  const { data: fatwasData, isLoading: loading, error: fatwasError } = useGetFatwasQuery();
+  const { data: fatwasData, isLoading: loading, error: fatwasError } = useGetFatwasQuery({ page, page_size: pageSize });
   const { data: departments = [] } = useGetDepartmentsQuery();
   
   const fatwas = fatwasData?.results || fatwasData || [];
+  const totalCount = typeof fatwasData === "object" && fatwasData ? fatwasData.count ?? fatwas.length : fatwas.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const handleChange = (e) => {
     if (e.target.name === "file") {
@@ -133,7 +136,7 @@ const Fatwas = () => {
 
       {(error || fatwasError) && (
         <div className="alert alert-danger">
-          {error || (fatwasError && String(fatwasError))}
+          {error || fatwasError?.data?.detail || fatwasError?.error || String(fatwasError)}
         </div>
       )}
 
@@ -218,6 +221,45 @@ const Fatwas = () => {
             </div>
           ))
         )}
+      </div>
+
+      <div className="d-flex justify-content-between align-items-center mt-3">
+        <div className="d-flex align-items-center gap-2">
+          <label className="form-label m-0">حجم الصفحة</label>
+          <select
+            className="form-select form-select-sm"
+            style={{ width: 90 }}
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
+        <div className="btn-group">
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            السابق
+          </button>
+          <span className="btn btn-sm btn-light disabled">
+            صفحة {page} من {totalPages}
+          </span>
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            التالي
+          </button>
+        </div>
       </div>
 
       {showModal && (

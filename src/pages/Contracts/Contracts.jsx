@@ -1,7 +1,8 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useMemo, useEffect } from "react";
 import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
 import { useGetContractsQuery, useGetDepartmentsQuery } from "../../services/api";
+import { useLocation } from "react-router-dom";
 import "./Contracts.css";
 
 const Contracts = () => {
@@ -10,6 +11,9 @@ const Contracts = () => {
   const [editingContract, setEditingContract] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [expiryFilter, setExpiryFilter] = useState("all"); // all | expired | expiring
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [formData, setFormData] = useState({
     date_received: "",
     contract_number: "",
@@ -24,10 +28,19 @@ const Contracts = () => {
   const [error, setError] = useState("");
 
   // Use cached queries - data is automatically cached and reused
-  const { data: contractsData, isLoading: loading, error: contractsError } = useGetContractsQuery();
+  const queryParams = useMemo(() => ({
+    page,
+    page_size: pageSize,
+    ...(expiryFilter !== "all" ? { expiry: expiryFilter } : {}),
+  }), [page, pageSize, expiryFilter]);
+
+  const { data: contractsData, isLoading: loading, error: contractsError } = useGetContractsQuery(queryParams);
   const { data: departments = [] } = useGetDepartmentsQuery();
+  const location = useLocation();
   
   const contracts = contractsData?.results || contractsData || [];
+  const totalCount = typeof contractsData === "object" && contractsData ? contractsData.count ?? contracts.length : contracts.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const handleChange = (e) => {
     if (e.target.name === "file") {
@@ -130,6 +143,35 @@ const Contracts = () => {
     return typeNames[type] || type;
   };
 
+  useEffect(() => {
+    // Initialize expiry filter if navigation state provided from notifications
+    const f = location?.state?.filter;
+    if (f === "expired" || f === "expiring") {
+      setExpiryFilter(f);
+    }
+  }, [location?.state]);
+
+  useEffect(() => {
+    // Reset to first page when expiry filter changes
+    setPage(1);
+  }, [expiryFilter]);
+
+  const isExpired = (endDate) => {
+    if (!endDate) return false;
+    const end = new Date(endDate);
+    const today = new Date();
+    return end < today;
+  };
+
+  const isExpiringSoon = (endDate) => {
+    if (!endDate) return false;
+    const end = new Date(endDate);
+    const today = new Date();
+    const in60 = new Date();
+    in60.setDate(in60.getDate() + 60);
+    return end >= today && end <= in60;
+  };
+
   const filteredContracts = contracts.filter((contract) => {
     const matchesSearch =
       contract.contract_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -166,9 +208,48 @@ const Contracts = () => {
         )}
       </div>
 
+      <div className="d-flex justify-content-between align-items-center mt-3">
+        <div className="d-flex align-items-center gap-2">
+          <label className="form-label m-0">حجم الصفحة</label>
+          <select
+            className="form-select form-select-sm"
+            style={{ width: 90 }}
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
+        <div className="btn-group">
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            السابق
+          </button>
+          <span className="btn btn-sm btn-light disabled">
+            صفحة {page} من {totalPages}
+          </span>
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            التالي
+          </button>
+        </div>
+      </div>
+
       {(error || contractsError) && (
         <div className="alert alert-danger">
-          {error || (contractsError && String(contractsError))}
+          {error || contractsError?.data?.detail || contractsError?.error || String(contractsError)}
         </div>
       )}
 
@@ -194,6 +275,16 @@ const Contracts = () => {
           <option value="direct">أمر مباشر</option>
           <option value="protocol">بروتوكول إسناد</option>
         </select>
+
+        <select
+          className="filter-select"
+          value={expiryFilter}
+          onChange={(e) => setExpiryFilter(e.target.value)}
+        >
+          <option value="all">كل الحالات</option>
+          <option value="expiring">ستنتهي خلال شهرين</option>
+          <option value="expired">العقود المنتهية</option>
+        </select>
       </div>
 
       <div className="contracts-grid">
@@ -203,11 +294,18 @@ const Contracts = () => {
             <p>لا توجد عقود</p>
           </div>
         ) : (
-          filteredContracts.map((contract) => (
-            <div key={contract.id} className="contract-card">
+          filteredContracts.map((contract) => {
+            const expired = isExpired(contract.end_date);
+            const expiring = !expired && isExpiringSoon(contract.end_date);
+            return (
+            <div key={contract.id} className={`contract-card ${expired ? 'expired' : expiring ? 'expiring' : ''}`}>
               <div className="card-header">
                 <h3>عقد رقم {contract.contract_number}</h3>
-                <span className="type-badge">{getTypeName(contract.contract_type)}</span>
+                <div className="badges-right">
+                  {expired && <span className="status-badge expired">منتهي</span>}
+                  {expiring && <span className="status-badge expiring">ينتهي قريباً</span>}
+                  <span className="type-badge">{getTypeName(contract.contract_type)}</span>
+                </div>
               </div>
               <p className="description">{contract.content}</p>
               <div className="card-details">
@@ -272,7 +370,7 @@ const Contracts = () => {
                 </div>
               )}
             </div>
-          ))
+          )})
         )}
       </div>
 

@@ -12,7 +12,7 @@ import {
   Legend,
 } from "chart.js";
 import { Bar, Line, Pie } from "react-chartjs-2";
-import { useGetReportsSummaryQuery } from "../../services/api";
+import { useGetReportsSummaryQuery, useGetReportsCasesByStatusQuery, useGetReportsContractsByTypeQuery } from "../../services/api";
 import "./Reports.css";
 
 ChartJS.register(
@@ -28,8 +28,10 @@ ChartJS.register(
 );
 
 const Reports = () => {
-  // Use cached query - data is automatically cached and reused
-  const { data: data, isLoading: loading, error } = useGetReportsSummaryQuery();
+  // Use cached queries - data is automatically cached and reused
+  const { data: data, isLoading: loadingSummary, error: errorSummary } = useGetReportsSummaryQuery();
+  const { data: casesByStatus = {}, isLoading: loadingCasesBy, error: errorCasesBy } = useGetReportsCasesByStatusQuery();
+  const { data: contractsByType = {}, isLoading: loadingContractsBy, error: errorContractsBy } = useGetReportsContractsByTypeQuery();
   
   const stats = {
     cases: { total: data?.cases || 0, by_status: {} },
@@ -39,45 +41,42 @@ const Reports = () => {
     appeals: { total: data?.appeals || 0 },
   };
 
-  if (loading) {
+  if (loadingSummary || loadingCasesBy || loadingContractsBy) {
     return <div className="loading">جاري التحميل...</div>;
   }
 
   // بيانات القضايا حسب الحالة
+  const casesStatusLabelMap = {
+    pending: "قيد الانتظار",
+    under_study: "قيد الدراسة",
+    in_court: "قيد التقاضي",
+    appealed: "قيد الاستئناف",
+    closed: "مغلقة",
+  };
   const casesByStatusData = {
-    labels: Object.keys(stats.cases.by_status || {}).map(
-      (status) =>
-        ({
-          pending: "قيد الانتظار",
-          active: "قيد التنفيذ",
-          closed: "مغلقة",
-        }[status] || status)
-    ),
+    labels: Object.keys(casesByStatus || {}).map((k) => casesStatusLabelMap[k] || k),
     datasets: [
       {
         label: "عدد القضايا",
-        data: Object.values(stats.cases.by_status || {}),
-        backgroundColor: ["#ffc107", "#17a2b8", "#28a745"],
+        data: Object.values(casesByStatus || {}),
+        backgroundColor: ["#ffc107", "#0ea5e9", "#6366f1", "#f97316", "#22c55e"],
       },
     ],
   };
 
   // بيانات العقود حسب النوع
+  const contractTypeLabelMap = {
+    tender: "مناقصة",
+    practice: "ممارسة",
+    direct: "أمر مباشر",
+    protocol: "بروتوكول إسناد",
+  };
   const contractsByTypeData = {
-    labels: Object.keys(stats.contracts.by_type || {}).map(
-      (type) =>
-        ({
-          service: "خدمات",
-          supply: "توريد",
-          consulting: "استشارات",
-          maintenance: "صيانة",
-          other: "أخرى",
-        }[type] || type)
-    ),
+    labels: Object.keys(contractsByType || {}).map((k) => contractTypeLabelMap[k] || k),
     datasets: [
       {
         label: "عدد العقود",
-        data: Object.values(stats.contracts.by_type || {}),
+        data: Object.values(contractsByType || {}),
         backgroundColor: "#007bff",
       },
     ],

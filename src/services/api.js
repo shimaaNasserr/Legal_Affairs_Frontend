@@ -217,6 +217,20 @@ export const api = createApi({
       providesTags: ["Reports"],
       keepUnusedDataFor: 300,
     }),
+    getReportsCasesByStatus: builder.query({
+      query: () => ({
+        url: "reports/cases_by_status/",
+      }),
+      providesTags: ["Reports"],
+      keepUnusedDataFor: 300,
+    }),
+    getReportsContractsByType: builder.query({
+      query: () => ({
+        url: "reports/contracts_by_type/",
+      }),
+      providesTags: ["Reports"],
+      keepUnusedDataFor: 300,
+    }),
   }),
 });
 
@@ -243,4 +257,6 @@ export const {
   useGetUsersQuery,
   useGetUserByIdQuery,
   useGetReportsSummaryQuery,
+  useGetReportsCasesByStatusQuery,
+  useGetReportsContractsByTypeQuery,
 } = api;

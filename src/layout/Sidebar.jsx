@@ -28,6 +28,8 @@ const Sidebar = () => {
         { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
         { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" },
         { to: "/contracts", icon: "ri-file-text-line", label: "العقود" },
+        { to: "/contracts", icon: "ri-timer-2-line", label: "ستنتهي قريباً", state: { filter: "expiring" } },
+        { to: "/contracts", icon: "ri-time-line", label: "العقود المنتهية", state: { filter: "expired" } },
         { to: "/fatwas", icon: "ri-book-open-line", label: "الفتاوى" },
         {
           to: "/reports",
@@ -43,6 +45,8 @@ const Sidebar = () => {
         { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
         { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" },
         { to: "/contracts", icon: "ri-file-text-line", label: "العقود" },
+        { to: "/contracts", icon: "ri-timer-2-line", label: "ستنتهي قريباً", state: { filter: "expiring" } },
+        { to: "/contracts", icon: "ri-time-line", label: "العقود المنتهية", state: { filter: "expired" } },
         { to: "/fatwas", icon: "ri-book-open-line", label: "الفتاوى" }
       );
     }
@@ -72,7 +76,7 @@ const Sidebar = () => {
       <ul>
         {roleLinks.map((link) => (
           <li key={link.to}>
-            <NavLink to={link.to} className="nav-item">
+            <NavLink to={link.to} state={link.state} className="nav-item">
               <i className={link.icon}></i>
               <span>{link.label}</span>
             </NavLink>
