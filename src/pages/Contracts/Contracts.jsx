@@ -2,6 +2,7 @@ import React, { useState, useContext } from "react";
 import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
 import { useGetContractsQuery, useGetDepartmentsQuery } from "../../services/api";
+import { canModifyData } from "../../utils/roles";
 import "./Contracts.css";
 
 const Contracts = () => {
@@ -150,9 +151,7 @@ const Contracts = () => {
     <div className="contracts-page">
       <div className="page-header">
         <h2>إدارة العقود</h2>
-        {(user?.role === "President" ||
-          user?.role === "GeneralManager" ||
-          user?.role === "DepartmentManager") && (
+        {canModifyData(user) && (
           <button
             className="btn btn-primary"
             onClick={() => {
@@ -253,9 +252,7 @@ const Contracts = () => {
                   </a>
                 )}
               </div>
-              {(user?.role === "President" ||
-                user?.role === "GeneralManager" ||
-                user?.role === "DepartmentManager") && (
+              {canModifyData(user) && (
                 <div className="card-actions">
                   <button
                     className="btn btn-sm btn-edit"

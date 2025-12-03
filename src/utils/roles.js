@@ -42,3 +42,82 @@ export const canAccess = (user, resource, action) => {
   return false;
 };
 
+// الحصول على الروابط المسموحة للمستخدم حسب دوره (بدون الصفحة الرئيسية)
+export const getRoleBasedLinks = (userRole) => {
+  if (!userRole) return [];
+
+  const links = [];
+
+  // رئيس الجامعة ومدير عام: جميع الصفحات
+  if (userRole === ROLES.PRESIDENT) {
+    links.push(
+      { to: "/users", icon: "ri-team-line", label: "إدارة المستخدمين" },
+      { to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" },
+      { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
+      { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" },
+      { to: "/contracts", icon: "ri-file-text-line", label: "العقود" },
+      { to: "/fatwas", icon: "ri-book-open-line", label: "الفتاوى" },
+      {
+        to: "/reports",
+        icon: "ri-bar-chart-line",
+        label: "التقارير والإحصائيات",
+      }
+    );
+  } else if (userRole === ROLES.GENERAL_MANAGER) {
+    links.push(
+      { to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" },
+      { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
+      { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" },
+      { to: "/contracts", icon: "ri-file-text-line", label: "العقود" },
+      {
+        to: "/reports",
+        icon: "ri-bar-chart-line",
+        label: "التقارير والإحصائيات",
+      }
+    );
+  }
+  // مدير إدارة: قضايا و تحقيقات و تظلمات إدارته فقط
+  else if (userRole === ROLES.DEPARTMENT_MANAGER) {
+    links.push(
+      { to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" },
+      { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
+      { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" },
+      { to: "/contracts", icon: "ri-file-text-line", label: "العقود" },
+      { to: "/fatwas", icon: "ri-book-open-line", label: "الفتاوى" }
+    );
+  }
+  // محامي: قضاياه وبروفايله
+  else if (userRole === ROLES.LAWYER) {
+    links.push(
+      { to: "/profile", icon: "ri-user-settings-line", label: "البروفايل" },
+      { to: "/cases", icon: "ri-file-list-3-line", label: "قضاياي" }
+    );
+  }
+  // سكرتير: قضايا و تحقيقات و تظلمات
+  else if (userRole === ROLES.SECRETARY) {
+    links.push(
+      { to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" },
+      { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
+      { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" }
+    );
+  }
+
+  return links;
+};
+
+// التحقق من إمكانية المستخدم على إنشاء/تعديل/حذف البيانات
+// الرئيس يمكنه فقط القراءة (read-only)
+export const canModifyData = (user) => {
+  if (!user || !user.role) return false;
+
+  // الرئيس يمكنه فقط القراءة
+  if (user.role === ROLES.PRESIDENT) {
+    return false;
+  }
+
+  // باقي الأدوار يمكنها التعديل حسب الصلاحيات
+  return (
+    user.role === ROLES.GENERAL_MANAGER ||
+    user.role === ROLES.DEPARTMENT_MANAGER
+  );
+};

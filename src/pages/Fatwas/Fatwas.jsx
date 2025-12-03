@@ -1,7 +1,8 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useMemo } from "react";
 import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
 import { useGetFatwasQuery, useGetDepartmentsQuery } from "../../services/api";
+import { canModifyData } from "../../utils/roles";
 import "./Fatwas.css";
 
 const Fatwas = () => {
@@ -16,13 +17,18 @@ const Fatwas = () => {
     file: null,
   });
   const [error, setError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  // Use cached queries - data is automatically cached and reused
-  const { data: fatwasData, isLoading: loading, error: fatwasError } = useGetFatwasQuery();
+  const {
+    data: fatwasData,
+    isLoading: loading,
+    error: fatwasError,
+  } = useGetFatwasQuery();
   const { data: departments = [] } = useGetDepartmentsQuery();
-  
   const fatwas = fatwasData?.results || fatwasData || [];
 
+  // Handle input changes
   const handleChange = (e) => {
     if (e.target.name === "file") {
       setFormData({ ...formData, file: e.target.files[0] });
@@ -31,20 +37,78 @@ const Fatwas = () => {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      request_content: "",
+      result: "",
+      department: "",
+      file: null,
+    });
+    setError("");
+  };
+
+  // Submit form
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setError("");
+  //   try {
+  //     const submitData = new FormData();
+  //     Object.keys(formData).forEach((key) => {
+  //       if (key === "file" && formData.file)
+  //         submitData.append("file", formData.file);
+  //       else if (formData[key] !== null && formData[key] !== "")
+  //         submitData.append(key, formData[key]);
+  //     });
+
+  //     if (editingFatwa) {
+  //       await axiosInstance.put(`fatwas/${editingFatwa.id}/`, submitData, {
+  //         headers: { "Content-Type": "multipart/form-data" },
+  //       });
+  //     } else {
+  //       await axiosInstance.post("fatwas/", submitData, {
+  //         headers: { "Content-Type": "multipart/form-data" },
+  //       });
+  //     }
+
+  //     setShowModal(false);
+  //     setEditingFatwa(null);
+  //     resetForm();
+  //     window.location.reload(); // optional: you can refetch instead
+  //   } catch (err) {
+  //     console.error("Full Axios Error:", err);
+  //     // Safely get backend message
+  //     const message =
+  //       err.response?.data?.detail || // DRF detail
+  //       err.response?.data?.message || // sometimes message
+  //       err.response?.data || // fallback raw data
+  //       err.message || // generic JS error
+  //       "فشل في حفظ الفتوى";
+  //     setError(message);
+  //   }
+  // };
+
+  // // Edit fatwa
+  // const handleEdit = (fatwa) => {
+  //   setEditingFatwa(fatwa);
+  //   setFormData({
+  //     request_content: fatwa.request_content || "",
+  //     result: fatwa.result || "",
+  //     department: fatwa.department?.id || fatwa.department || "",
+  //     file: null,
+  //   });
+  //   setShowModal(true);
+  //   setError("");
+  // };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
     try {
       const submitData = new FormData();
       Object.keys(formData).forEach((key) => {
-        if (key === "file") {
-          if (formData.file) {
-            submitData.append("file", formData.file);
-          }
-        } else if (formData[key] !== null && formData[key] !== "") {
-          submitData.append(key, formData[key]);
-        }
+        if (key === "file" && formData.file)
+          submitData.append("file", formData.file);
+        else if (formData[key]) submitData.append(key, formData[key]);
       });
 
       if (editingFatwa) {
@@ -56,68 +120,64 @@ const Fatwas = () => {
           headers: { "Content-Type": "multipart/form-data" },
         });
       }
+
       setShowModal(false);
       setEditingFatwa(null);
       resetForm();
-      // Cache will be invalidated by RTK Query if we add mutations
-      window.location.reload(); // Temporary: reload to refresh cache
+      // refetch list here instead of reload
     } catch (err) {
-      console.error("Error saving fatwa:", err);
-      setError(err.response?.data?.message || "فشل في حفظ الفتوى");
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          JSON.stringify(err.response?.data) ||
+          err.message ||
+          "فشل في حفظ الفتوى"
+      );
     }
   };
 
-  const handleEdit = (fatwa) => {
-    setEditingFatwa(fatwa);
-    setFormData({
-      request_content: fatwa.request_content || "",
-      result: fatwa.result || "",
-      department: fatwa.department || "",
-      file: null,
-    });
-    setShowModal(true);
-  };
-
+  // Delete fatwa
   const handleDelete = async (fatwaId) => {
     if (!window.confirm("هل أنت متأكد من حذف هذه الفتوى؟")) return;
-
+    setError("");
     try {
       await axiosInstance.delete(`fatwas/${fatwaId}/`);
-      // Cache will be invalidated by RTK Query if we add mutations
-      window.location.reload(); // Temporary: reload to refresh cache
+      window.location.reload(); // optional: you can remove item from local state instead
     } catch (err) {
-      console.error("Error deleting fatwa:", err);
+      console.error(err);
       setError("فشل في حذف الفتوى");
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      request_content: "",
-      result: "",
-      department: "",
-      file: null,
-    });
-  };
+  // Filter fatwas by search term
+  const filteredFatwas = fatwas.filter((fatwa) => {
+    const genNum =
+      fatwa.general_number != null ? String(fatwa.general_number) : "";
+    const requestContent = fatwa.request_content?.toLowerCase() || "";
+    const result = fatwa.result?.toLowerCase() || "";
+    return (
+      genNum.includes(searchTerm) ||
+      requestContent.includes(searchTerm.toLowerCase()) ||
+      result.includes(searchTerm.toLowerCase())
+    );
+  });
 
-  const filteredFatwas = fatwas.filter(
-    (fatwa) =>
-      fatwa.general_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      fatwa.request_content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      fatwa.result?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Pagination logic
+  const totalPages = Math.ceil(filteredFatwas.length / itemsPerPage);
+  const paginatedFatwas = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredFatwas.slice(start, start + itemsPerPage);
+  }, [filteredFatwas, currentPage]);
 
-  if (loading) {
-    return <div className="loading">جاري التحميل...</div>;
-  }
+  if (loading) return <div className="loading">جاري التحميل...</div>;
+  if (fatwasError)
+    return <div className="alert alert-danger">فشل في تحميل الفتاوى</div>;
 
   return (
     <div className="fatwas-page">
       <div className="page-header">
         <h2>إدارة الفتاوى</h2>
-        {(user?.role === "President" ||
-          user?.role === "GeneralManager" ||
-          user?.role === "DepartmentManager") && (
+        {canModifyData(user) && (
           <button
             className="btn btn-primary"
             onClick={() => {
@@ -131,11 +191,7 @@ const Fatwas = () => {
         )}
       </div>
 
-      {(error || fatwasError) && (
-        <div className="alert alert-danger">
-          {error || (fatwasError && String(fatwasError))}
-        </div>
-      )}
+      {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="search-box">
         <i className="ri-search-line"></i>
@@ -143,23 +199,28 @@ const Fatwas = () => {
           type="text"
           placeholder="بحث في الفتاوى..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1); // reset to first page on search
+          }}
         />
       </div>
 
       <div className="fatwas-list">
-        {filteredFatwas.length === 0 ? (
+        {paginatedFatwas.length === 0 ? (
           <div className="empty-state">
             <i className="ri-inbox-line"></i>
             <p>لا توجد فتاوى</p>
           </div>
         ) : (
-          filteredFatwas.map((fatwa) => (
+          paginatedFatwas.map((fatwa) => (
             <div key={fatwa.id} className="fatwa-card">
               <div className="card-header">
-                <h3>فتوى رقم {fatwa.general_number}</h3>
+                <h3>فتوى رقم {String(fatwa.general_number)}</h3>
                 {fatwa.department_name && (
-                  <span className="department-badge">{fatwa.department_name}</span>
+                  <span className="department-badge">
+                    {fatwa.department_name}
+                  </span>
                 )}
               </div>
               <div className="fatwa-content">
@@ -188,7 +249,7 @@ const Fatwas = () => {
                 )}
                 {fatwa.file && (
                   <a
-                    href={fatwa.file}
+                    href={fatwa.file?.url || fatwa.file}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="file-link"
@@ -197,9 +258,7 @@ const Fatwas = () => {
                   </a>
                 )}
               </div>
-              {(user?.role === "President" ||
-                user?.role === "GeneralManager" ||
-                user?.role === "DepartmentManager") && (
+              {canModifyData(user) && (
                 <div className="card-actions">
                   <button
                     className="btn btn-sm btn-edit"
@@ -220,15 +279,28 @@ const Fatwas = () => {
         )}
       </div>
 
+      {/* Pagination buttons */}
+      {totalPages > 1 && (
+        <div className="pagination">
+          {[...Array(totalPages)].map((_, idx) => (
+            <button
+              key={idx}
+              className={`page-btn ${currentPage === idx + 1 ? "active" : ""}`}
+              onClick={() => setCurrentPage(idx + 1)}
+            >
+              {idx + 1}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Modal for add/edit */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingFatwa ? "تعديل فتوى" : "إضافة فتوى جديدة"}</h3>
-              <button
-                className="close-btn"
-                onClick={() => setShowModal(false)}
-              >
+              <button className="close-btn" onClick={() => setShowModal(false)}>
                 ×
               </button>
             </div>
@@ -241,9 +313,8 @@ const Fatwas = () => {
                   onChange={handleChange}
                   rows="6"
                   required
-                ></textarea>
+                />
               </div>
-
               <div className="form-group">
                 <label>النتيجة</label>
                 <textarea
@@ -251,9 +322,8 @@ const Fatwas = () => {
                   value={formData.result}
                   onChange={handleChange}
                   rows="6"
-                ></textarea>
+                />
               </div>
-
               <div className="form-group">
                 <label>الإدارة *</label>
                 <select
@@ -270,7 +340,6 @@ const Fatwas = () => {
                   ))}
                 </select>
               </div>
-
               <div className="form-group">
                 <label>رفع ملف الفتوى (PDF)</label>
                 <input
@@ -280,13 +349,11 @@ const Fatwas = () => {
                   onChange={handleChange}
                 />
               </div>
-
               {(error || fatwasError) && (
-        <div className="alert alert-danger">
-          {error || (fatwasError && String(fatwasError))}
-        </div>
-      )}
-
+                <div className="alert alert-danger">
+                  {error || String(fatwasError)}
+                </div>
+              )}
               <div className="modal-actions">
                 <button type="submit" className="btn btn-primary">
                   {editingFatwa ? "تحديث" : "إضافة"}

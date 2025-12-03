@@ -30,7 +30,7 @@ ChartJS.register(
 const Reports = () => {
   // Use cached query - data is automatically cached and reused
   const { data: data, isLoading: loading, error } = useGetReportsSummaryQuery();
-  
+
   const stats = {
     cases: { total: data?.cases || 0, by_status: {} },
     contracts: { total: data?.contracts || 0, by_type: {} },
@@ -258,4 +258,3 @@ const Reports = () => {
 };
 
 export default Reports;
-
