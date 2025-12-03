@@ -1,5 +1,5 @@
 // src/layout/Navbar.jsx
-import React, { useContext, useState, useMemo } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import "./layout.css";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -9,11 +9,15 @@ const Navbar = ({ onMenuToggle }) => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [openNotif, setOpenNotif] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const prevTotalRef = useRef(0);
 
   // Server-side counts for expired and expiring contracts (minimizes payload)
-  const { data: expiredResp } = useGetContractsQuery({ expiry: "expired", page: 1, page_size: 1 });
-  const { data: expiringResp } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 1 });
-  const { data: expiringListResp } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 5 });
+  // Enable auto-refresh every 60s
+  const polling = { pollingInterval: 60000, refetchOnMountOrArgChange: true };
+  const { data: expiredResp } = useGetContractsQuery({ expiry: "expired", page: 1, page_size: 1 }, polling);
+  const { data: expiringResp } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 1 }, polling);
+  const { data: expiringListResp } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 5 }, polling);
   const expiredCount = typeof expiredResp === "object" ? expiredResp?.count ?? 0 : 0;
   const expiringCount = typeof expiringResp === "object" ? expiringResp?.count ?? 0 : 0;
   const expiringList = (expiringListResp?.results || expiringListResp || []).slice().sort((a, b) => {
@@ -23,6 +27,41 @@ const Navbar = ({ onMenuToggle }) => {
   });
 
   const totalAlerts = (expiredCount || 0) + (expiringCount || 0);
+
+  // Role-based visibility (only leadership and department managers see notifications)
+  const canSeeNotifications = ["President", "GeneralManager", "DepartmentManager"].includes(user?.role);
+
+  // Play a short beep using Web Audio API
+  const playBeep = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = 880; // A5
+      o.connect(g);
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.1, ctx.currentTime + 0.01);
+      o.start();
+      // quick decay
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+      o.stop(ctx.currentTime + 0.3);
+    } catch {}
+  };
+
+  // Show toast and sound when alerts increase
+  useEffect(() => {
+    const prev = prevTotalRef.current || 0;
+    if (totalAlerts > prev) {
+      setShowToast(true);
+      playBeep();
+      const t = setTimeout(() => setShowToast(false), 4000);
+      return () => clearTimeout(t);
+    }
+    prevTotalRef.current = totalAlerts;
+  }, [totalAlerts]);
 
   const handleLogout = () => {
     logout();
@@ -57,6 +96,7 @@ const Navbar = ({ onMenuToggle }) => {
         </span>
       </div>
       <div className="navbar-right">
+        {canSeeNotifications && (
         <div className="notification-icon" onClick={() => setOpenNotif((v) => !v)}>
           <i className="ri-notification-3-line"></i>
           {totalAlerts > 0 && (
@@ -125,6 +165,12 @@ const Navbar = ({ onMenuToggle }) => {
             </div>
           )}
         </div>
+        )}
+        {showToast && (
+          <div className="toast-notice">
+            <i className="ri-notification-3-line" /> تم تحديث إشعارات العقود
+          </div>
+        )}
         {user && (
           <div className="user-info">
             <span className="user-name">

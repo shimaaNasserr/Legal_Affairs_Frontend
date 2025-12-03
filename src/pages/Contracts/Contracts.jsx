@@ -12,6 +12,7 @@ const Contracts = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [expiryFilter, setExpiryFilter] = useState("all"); // all | expired | expiring
+  const [sortBySoonest, setSortBySoonest] = useState(false); // sort by nearest end date even in All view
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [formData, setFormData] = useState({
@@ -37,6 +38,12 @@ const Contracts = () => {
   const { data: contractsData, isLoading: loading, error: contractsError } = useGetContractsQuery(queryParams);
   const { data: departments = [] } = useGetDepartmentsQuery();
   const location = useLocation();
+
+  // Fetch lightweight counts for badges
+  const { data: expiredCountResp } = useGetContractsQuery({ expiry: "expired", page: 1, page_size: 1 });
+  const { data: expiringCountResp } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 1 });
+  const expiredCount = typeof expiredCountResp === "object" ? (expiredCountResp?.count ?? 0) : 0;
+  const expiringCount = typeof expiringCountResp === "object" ? (expiringCountResp?.count ?? 0) : 0;
   
   const contracts = contractsData?.results || contractsData || [];
   const totalCount = typeof contractsData === "object" && contractsData ? contractsData.count ?? contracts.length : contracts.length;
@@ -67,7 +74,7 @@ const Contracts = () => {
       });
 
       if (editingContract) {
-        await axiosInstance.put(
+        await axiosInstance.patch(
           `contracts/${editingContract.id}/`,
           submitData,
           {
@@ -86,7 +93,15 @@ const Contracts = () => {
       window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error saving contract:", err);
-      setError(err.response?.data?.message || "فشل في حفظ العقد");
+      const data = err?.response?.data;
+      const apiDetail = data?.detail || data?.message;
+      // If serializer error returns a dict of field errors
+      const fieldErrors = data && typeof data === "object" && !Array.isArray(data)
+        ? Object.entries(data)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : String(v)}`)
+            .join(" | ")
+        : null;
+      setError(apiDetail || fieldErrors || "فشل في حفظ العقد");
     }
   };
 
@@ -144,17 +159,68 @@ const Contracts = () => {
   };
 
   useEffect(() => {
-    // Initialize expiry filter if navigation state provided from notifications
+    // On mount, restore saved view per user
+    try {
+      const userStr = localStorage.getItem('user');
+      const uid = userStr ? (JSON.parse(userStr)?.id || 'anon') : 'anon';
+      const savedView = localStorage.getItem(`contracts_view_${uid}`);
+      if (savedView) {
+        const v = JSON.parse(savedView);
+        if (v.expiryFilter) setExpiryFilter(v.expiryFilter);
+        if (v.typeFilter) setTypeFilter(v.typeFilter);
+        if (typeof v.pageSize === 'number') setPageSize(v.pageSize);
+        if (typeof v.sortBySoonest === 'boolean') setSortBySoonest(v.sortBySoonest);
+        if (typeof v.searchTerm === 'string') setSearchTerm(v.searchTerm);
+      } else {
+        // fallback to previous single key
+        const saved = localStorage.getItem("contracts_expiry_filter");
+        if (saved === "expired" || saved === "expiring" || saved === "all") {
+          setExpiryFilter(saved);
+        }
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    // Initialize/override from navigation state provided by notifications
     const f = location?.state?.filter;
     if (f === "expired" || f === "expiring") {
       setExpiryFilter(f);
+      try {
+        const userStr = localStorage.getItem('user');
+        const uid = userStr ? (JSON.parse(userStr)?.id || 'anon') : 'anon';
+        const v = JSON.parse(localStorage.getItem(`contracts_view_${uid}`) || '{}');
+        v.expiryFilter = f;
+        localStorage.setItem(`contracts_view_${uid}`, JSON.stringify(v));
+      } catch {}
     }
   }, [location?.state]);
 
   useEffect(() => {
     // Reset to first page when expiry filter changes
     setPage(1);
+    try {
+      const userStr = localStorage.getItem('user');
+      const uid = userStr ? (JSON.parse(userStr)?.id || 'anon') : 'anon';
+      const v = JSON.parse(localStorage.getItem(`contracts_view_${uid}`) || '{}');
+      v.expiryFilter = expiryFilter;
+      localStorage.setItem(`contracts_view_${uid}`, JSON.stringify(v));
+    } catch {}
   }, [expiryFilter]);
+
+  // Persist other view settings
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const uid = userStr ? (JSON.parse(userStr)?.id || 'anon') : 'anon';
+      const v = JSON.parse(localStorage.getItem(`contracts_view_${uid}`) || '{}');
+      v.typeFilter = typeFilter;
+      v.pageSize = pageSize;
+      v.sortBySoonest = sortBySoonest;
+      v.searchTerm = searchTerm;
+      localStorage.setItem(`contracts_view_${uid}`, JSON.stringify(v));
+    } catch {}
+  }, [typeFilter, pageSize, sortBySoonest, searchTerm]);
 
   const isExpired = (endDate) => {
     if (!endDate) return false;
@@ -172,6 +238,74 @@ const Contracts = () => {
     return end >= today && end <= in60;
   };
 
+  const isExpiringWithin7 = (endDate) => {
+    if (!endDate) return false;
+    const end = new Date(endDate);
+    const today = new Date();
+    const in7 = new Date();
+    in7.setDate(in7.getDate() + 7);
+    return end >= today && end <= in7;
+  };
+
+  // CSV export of current filtered/sorted view (fetch all pages server-side with same filters, then client filter search/type)
+  const exportCsv = async () => {
+    try {
+      const params = { page: 1, page_size: 10000 };
+      if (expiryFilter !== 'all') params.expiry = expiryFilter;
+      if (typeFilter !== 'all') params.contract_type = typeFilter;
+      const resp = await axiosInstance.get('contracts/', { params });
+      const all = resp.data?.results || resp.data || [];
+      // Apply client search filter like UI
+      const filtered = all.filter((contract) => {
+        const matchesSearch =
+          (contract.contract_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (contract.general_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (contract.content || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = typeFilter === 'all' || contract.contract_type === typeFilter;
+        return matchesSearch && matchesType;
+      });
+      // Sort if needed
+      const rows = (expiryFilter !== 'all' || sortBySoonest)
+        ? [...filtered].sort((a,b) => {
+            const da = a.end_date ? new Date(a.end_date).getTime() : Number.MAX_SAFE_INTEGER;
+            const db = b.end_date ? new Date(b.end_date).getTime() : Number.MAX_SAFE_INTEGER;
+            return da - db;
+          })
+        : filtered;
+      const headers = [
+        'contract_number','general_number','contract_type','date_received','end_date','archive_date','department','content','progress'
+      ];
+      const escapeCsv = (v) => {
+        if (v === null || v === undefined) return '';
+        const s = String(v).replace(/"/g, '""');
+        return /[",\n]/.test(s) ? `"${s}"` : s;
+      };
+      const csv = [headers.join(',')].concat(rows.map(r => [
+        r.contract_number,
+        r.general_number,
+        r.contract_type,
+        r.date_received,
+        r.end_date || '',
+        r.archive_date || '',
+        r.department || '',
+        r.content || '',
+        r.progress || ''
+      ].map(escapeCsv).join(','))).join('\n');
+      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contracts_export_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('CSV export failed', e);
+      alert('فشل تصدير CSV');
+    }
+  };
+
   const filteredContracts = contracts.filter((contract) => {
     const matchesSearch =
       contract.contract_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -184,6 +318,18 @@ const Contracts = () => {
     return matchesSearch && matchesType;
   });
 
+  // Sort by nearest end date when viewing expiring/expired, or when toggle is on
+  const sortedContracts = useMemo(() => {
+    if (expiryFilter === 'all' && !sortBySoonest) return filteredContracts;
+    const copy = [...filteredContracts];
+    copy.sort((a, b) => {
+      const da = a.end_date ? new Date(a.end_date).getTime() : Number.MAX_SAFE_INTEGER;
+      const db = b.end_date ? new Date(b.end_date).getTime() : Number.MAX_SAFE_INTEGER;
+      return da - db;
+    });
+    return copy;
+  }, [filteredContracts, expiryFilter, sortBySoonest]);
+
   if (loading) {
     return <div className="loading">جاري التحميل...</div>;
   }
@@ -195,18 +341,56 @@ const Contracts = () => {
         {(user?.role === "President" ||
           user?.role === "GeneralManager" ||
           user?.role === "DepartmentManager") && (
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              setEditingContract(null);
-              resetForm();
-              setShowModal(true);
-            }}
-          >
-            <i className="ri-add-circle-line"></i> إضافة عقد جديد
-          </button>
+          <div className="d-flex gap-2">
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setEditingContract(null);
+                resetForm();
+                setShowModal(true);
+              }}
+            >
+              <i className="ri-add-circle-line"></i> إضافة عقد جديد
+            </button>
+            <button className="btn btn-outline-secondary" onClick={exportCsv}>
+              <i className="ri-download-2-line"></i> تصدير CSV
+            </button>
+          </div>
         )}
       </div>
+
+      {/* Segmented filter for expiry with counts */}
+      <div className="btn-group mb-3" role="group" aria-label="expiry-segment">
+        <button
+          type="button"
+          className={`btn btn-sm ${expiryFilter === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+          onClick={() => setExpiryFilter('all')}
+        >
+          الكل
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${expiryFilter === 'expiring' ? 'btn-primary' : 'btn-outline-primary'}`}
+          onClick={() => setExpiryFilter('expiring')}
+          title="ستنتهي خلال شهرين"
+        >
+          ستنتهي قريباً ({expiringCount})
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${expiryFilter === 'expired' ? 'btn-primary' : 'btn-outline-primary'}`}
+          onClick={() => setExpiryFilter('expired')}
+        >
+          منتهية ({expiredCount})
+        </button>
+      </div>
+
+      {/* Info banner when a filter is applied or sorting enabled */}
+      {(expiryFilter !== 'all' || sortBySoonest) && (
+        <div className="alert alert-info" role="alert">
+          {expiryFilter === 'expired' ? 'تعرض العقود المنتهية فقط.' : expiryFilter === 'expiring' ? 'تعرض العقود التي ستنتهي خلال شهرين.' : 'تم تفعيل فرز الأقرب انتهاء.'}
+        </div>
+      )}
 
       <div className="d-flex justify-content-between align-items-center mt-3">
         <div className="d-flex align-items-center gap-2">
@@ -225,6 +409,21 @@ const Contracts = () => {
             <option value={20}>20</option>
             <option value={50}>50</option>
           </select>
+          <div className="form-check ms-3" title="عرض العقود المنتهية فقط">
+            <input
+              id="expiredOnly"
+              className="form-check-input"
+              type="checkbox"
+              checked={expiryFilter === 'expired'}
+              onChange={(e) => {
+                setExpiryFilter(e.target.checked ? 'expired' : 'all');
+                setPage(1);
+              }}
+            />
+            <label className="form-check-label" htmlFor="expiredOnly">
+              إظهار المنتهية فقط
+            </label>
+          </div>
         </div>
         <div className="btn-group">
           <button
@@ -285,25 +484,40 @@ const Contracts = () => {
           <option value="expiring">ستنتهي خلال شهرين</option>
           <option value="expired">العقود المنتهية</option>
         </select>
+
+        <div className="form-check ms-2" title="فرز الأقرب انتهاء أولاً">
+          <input
+            id="sortSoonest"
+            className="form-check-input"
+            type="checkbox"
+            checked={sortBySoonest}
+            onChange={(e) => setSortBySoonest(e.target.checked)}
+          />
+          <label className="form-check-label" htmlFor="sortSoonest">
+            الأقرب انتهاء أولاً
+          </label>
+        </div>
       </div>
 
       <div className="contracts-grid">
-        {filteredContracts.length === 0 ? (
+        {sortedContracts.length === 0 ? (
           <div className="empty-state">
             <i className="ri-inbox-line"></i>
             <p>لا توجد عقود</p>
           </div>
         ) : (
-          filteredContracts.map((contract) => {
+          sortedContracts.map((contract) => {
             const expired = isExpired(contract.end_date);
             const expiring = !expired && isExpiringSoon(contract.end_date);
+            const urgent = !expired && isExpiringWithin7(contract.end_date);
             return (
-            <div key={contract.id} className={`contract-card ${expired ? 'expired' : expiring ? 'expiring' : ''}`}>
+            <div key={contract.id} className={`contract-card ${expired ? 'expired' : expiring ? 'expiring' : ''} ${urgent ? 'urgent' : ''}`}>
               <div className="card-header">
                 <h3>عقد رقم {contract.contract_number}</h3>
                 <div className="badges-right">
                   {expired && <span className="status-badge expired">منتهي</span>}
-                  {expiring && <span className="status-badge expiring">ينتهي قريباً</span>}
+                  {urgent && <span className="status-badge urgent">ينتهي خلال 7 أيام</span>}
+                  {!urgent && expiring && <span className="status-badge expiring">ينتهي قريباً</span>}
                   <span className="type-badge">{getTypeName(contract.contract_type)}</span>
                 </div>
               </div>

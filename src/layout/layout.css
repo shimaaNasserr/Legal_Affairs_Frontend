@@ -159,6 +159,23 @@
   color: #6b7280;
 }
 
+/* Toast notice for navbar updates */
+.toast-notice {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  background: rgba(16, 185, 129, 0.95);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1100;
+}
+
 .user-info {
   display: flex;
   flex-direction: column;

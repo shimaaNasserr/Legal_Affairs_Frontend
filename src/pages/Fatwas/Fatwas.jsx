@@ -51,7 +51,8 @@ const Fatwas = () => {
       });
 
       if (editingFatwa) {
-        await axiosInstance.put(`fatwas/${editingFatwa.id}/`, submitData, {
+        // Use PATCH so we don't need to resend required fields when editing
+        await axiosInstance.patch(`fatwas/${editingFatwa.id}/`, submitData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
       } else {
@@ -66,7 +67,8 @@ const Fatwas = () => {
       window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error saving fatwa:", err);
-      setError(err.response?.data?.message || "فشل في حفظ الفتوى");
+      const apiDetail = err?.response?.data?.detail || err?.response?.data?.message;
+      setError(apiDetail || "فشل في حفظ الفتوى");
     }
   };
 
