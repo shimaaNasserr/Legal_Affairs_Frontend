@@ -1,53 +1,52 @@
-import React, { useState, useMemo, useContext } from "react";
-import { AuthContext } from "../../context/AuthContext";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGetCasesQuery } from "../../services/api";
+import axiosInstance from "../../apis/axiosInstance";
+import { AuthContext } from "../../context/AuthContext";
 import "./Cases.css";
+
+const CASE_STATUS_NAMES = {
+  pending: "قيد الانتظار",
+  under_study: "قيد الدراسة",
+  in_court: "قيد التقاضي",
+  closed: "منتهية",
+  appealed: "قيد الاستئناف",
+};
 
 const Cases = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  const [cases, setCases] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [appealNotifications, setAppealNotifications] = useState([]);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
-  // Use cached query - data is automatically cached and reused
-  const { data: casesData, isLoading: loading, error } = useGetCasesQuery();
-  const cases = casesData?.results || casesData || [];
+  const fetchCases = async () => {
+    if (!user) return;
 
-  // Calculate appeal notifications from cached data
-  const appealNotifications = useMemo(() => {
-    return cases.filter((c) => c.appeal_status === null);
-  }, [cases]);
+    setLoading(true);
+    try {
+      let data = (await axiosInstance.get("cases/")).data;
 
-  // =====================================
-  // فتح الفورم للتعديل
-  // =====================================
-  const handleEdit = (caseItem) => {
-    const divisionNameQuery = caseItem.division_name
-      ? `?divisionName=${encodeURIComponent(caseItem.division_name)}`
-      : "";
-    navigate(`/add-case/${caseItem.court}/${caseItem.id}${divisionNameQuery}`, {
-      state: { caseId: caseItem.id },
-    });
+      // لو المحامي من إدارة القضايا → يشوف فقط القضايا اللي هو أضافها
+      if (user.role === "Lawyer" && user.department_name === "إدارة القضايا") {
+        data = data.filter((c) => c.created_by === user.id);
+      }
+
+      setCases(data);
+      setAppealNotifications(data.filter((c) => c.appeal_status === null));
+    } catch (err) {
+      console.error("❌ Error fetching cases:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDetails = (caseItem) => {
-    navigate(`/cases/${caseItem.id}`);
-  };
-
-  const getStatusName = (status) => {
-    const statusNames = {
-      pending: "قيد الانتظار",
-      under_study: "قيد الدراسة",
-      in_court: "قيد التقاضي",
-      closed: "منتهية",
-      appealed: "قيد الاستئناف",
-    };
-    return statusNames[status] || status;
-  };
-
-  const getStatusClass = (status) => `status-badge status-${status}`;
+  useEffect(() => {
+    fetchCases();
+  }, [user]);
 
   const filteredCases = cases.filter((c) => {
     const search = searchTerm.toLowerCase();
@@ -56,10 +55,41 @@ const Cases = () => {
       c.lawsuit_number?.toLowerCase().includes(search) ||
       c.plaintiff?.toLowerCase().includes(search) ||
       c.defendant?.toLowerCase().includes(search);
-    const matchesStatus =
-      statusFilter === "all" || c.case_status === statusFilter;
+
+    const matchesStatus = statusFilter === "all" || c.case_status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
+
+  const canEditCase = (c) => {
+    if (!user) return false;
+    if (user.role === "Lawyer" && user.department_name === "إدارة القضايا")
+      return c.created_by === user.id;
+    return ["President", "GeneralManager", "DepartmentManager"].includes(user.role);
+  };
+
+  const canDeleteCase = (c) => {
+    if (!user) return false;
+    return ["GeneralManager", "DepartmentManager"].includes(user.role);
+  };
+
+  const canAddCase = () => {
+    if (!user) return false;
+    const deptName = user.department_name || "";
+    if (user.role === "Lawyer" && deptName === "إدارة القضايا") return true;
+    return ["President", "GeneralManager", "DepartmentManager"].includes(user.role);
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await axiosInstance.delete(`/cases/${id}/`);
+      setCases((prev) => prev.filter((c) => c.id !== id));
+      setConfirmDeleteId(null);
+    } catch (err) {
+      console.error("فشل حذف القضية", err);
+      setConfirmDeleteId(null);
+    }
+  };
 
   if (loading) return <div className="loading">جاري التحميل...</div>;
 
@@ -67,12 +97,12 @@ const Cases = () => {
     <div className="cases-page">
       <div className="page-header">
         <h2>إدارة القضايا</h2>
-        <button
-          className="btn btn-primary"
-          onClick={() => navigate("/select-court")}
-        >
-          <i className="ri-add-circle-line"></i> إضافة قضية جديدة
-        </button>
+
+        {canAddCase() && (
+          <button className="btn btn-primary add-btn" onClick={() => navigate("/select-court")}>
+            <i className="ri-add-circle-line"></i> إضافة قضية جديدة
+          </button>
+        )}
       </div>
 
       {appealNotifications.length > 0 && (
@@ -88,16 +118,14 @@ const Cases = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
+
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="all">جميع الحالات</option>
-          <option value="pending">قيد الانتظار</option>
-          <option value="under_study">قيد الدراسة</option>
-          <option value="in_court">قيد التقاضي</option>
-          <option value="closed">منتهية</option>
-          <option value="appealed">قيد الاستئناف</option>
+          {Object.entries(CASE_STATUS_NAMES).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -109,24 +137,28 @@ const Cases = () => {
           </div>
         ) : (
           filteredCases.map((c) => {
-            const courtDisplay = c.division_name
+            const hasDivision =
+              c.division_name &&
+              c.division_name.trim() !== "-" &&
+              c.division_name.trim() !== "";
+
+            const courtDisplay = hasDivision
               ? `${c.court_name} - ${c.division_name}`
               : c.court_name;
 
-            const courtAndDepartment = c.department?.name
-              ? `${courtDisplay} (${c.department.name})`
-              : courtDisplay;
-
             return (
               <div key={c.id} className="case-card">
+                {/* header */}
                 <div className="case-card-header">
                   <h3>
                     {c.plaintiff} vs {c.defendant}
                   </h3>
-                  <span className={getStatusClass(c.case_status)}>
-                    {getStatusName(c.case_status)}
+                  <span className={`status-badge status-${c.case_status}`}>
+                    {CASE_STATUS_NAMES[c.case_status]}
                   </span>
                 </div>
+
+                {/* body */}
                 <div className="case-card-body">
                   <div>
                     <strong>رقم القضية:</strong> {c.case_number}
@@ -138,37 +170,70 @@ const Cases = () => {
                     <strong>رقم الدعوى:</strong> {c.lawsuit_number}
                   </div>
                   <div>
-                    <strong>المحكمة:</strong>
-                    {courtAndDepartment}
+                    <strong>المحكمة:</strong> {courtDisplay}
                   </div>
                   <div>
                     <strong>تاريخ ورود الدعوى:</strong> {c.date_received}
                   </div>
                   <div>
-                    <strong>موقف الطعن:</strong>{" "}
+                    <strong>موقف الطعن:</strong>
                     {c.appeal_status === null
                       ? "غير محدد"
-                      : c.appeal_status === true || c.appeal_status === "true"
+                      : c.appeal_status === true
                       ? "تم الطعن"
                       : "لم يتم الطعن"}
                   </div>
                 </div>
+
+                {/* actions */}
                 <div className="case-card-actions">
                   <button
                     className="btn btn-sm btn-view"
-                    onClick={() => handleDetails(c)}
+                    onClick={() => navigate(`/cases/${c.id}`)}
                   >
-                    <i className="ri-eye-line"></i> تفاصيل
+                    عرض
                   </button>
-                  {(user?.role === "President" ||
-                    user?.role === "GeneralManager" ||
-                    user?.role === "DepartmentManager") && (
+
+                  {canEditCase(c) && (
                     <button
                       className="btn btn-sm btn-edit"
-                      onClick={() => handleEdit(c)}
+                      onClick={() => navigate(`/cases/${c.id}/edit`)}
                     >
-                      <i className="ri-pencil-line"></i> تعديل
+                      تعديل
                     </button>
+                  )}
+
+                  {canDeleteCase(c) && (
+                    <>
+                      <button
+                        className="btn btn-sm btn-delete"
+                        onClick={() => setConfirmDeleteId(c.id)}
+                      >
+                        حذف
+                      </button>
+
+                      {confirmDeleteId === c.id && (
+                        <div className="confirm-overlay">
+                          <div className="confirm-box">
+                            <p>هل أنت متأكد من حذف هذه القضية؟</p>
+                            <div className="confirm-buttons">
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleDelete(c.id)}
+                              >
+                                نعم
+                              </button>
+                              <button
+                                className="btn btn-sm btn-secondary"
+                                onClick={() => setConfirmDeleteId(null)}
+                              >
+                                لا
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

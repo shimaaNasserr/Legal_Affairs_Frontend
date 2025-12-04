@@ -145,6 +145,22 @@ export const api = createApi({
       providesTags: (result, error, id) => [{ type: "Cases", id }],
       keepUnusedDataFor: 300,
     }),
+    addCase: builder.mutation({
+      query: (formData) => ({
+        url: "/cases/",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Cases"],
+    }),
+    updateCase: builder.mutation({
+      query: ({ id, formData }) => ({
+        url: `/cases/${id}/`,
+        method: "PUT",
+        body: formData,
+      }),
+      invalidatesTags: ["Cases"],
+    }),
 
     // Contracts endpoints
     getContracts: builder.query({
@@ -234,6 +250,8 @@ export const {
   useDeleteAppealMutation,
   useGetCasesQuery,
   useGetCaseByIdQuery,
+  useaddCase,
+  useaupdateCase,
   useGetContractsQuery,
   useGetContractByIdQuery,
   useGetCourtsQuery,
