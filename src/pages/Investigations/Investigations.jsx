@@ -8,6 +8,7 @@ import {
   useUpdateInvestigationMutation,
   useDeleteInvestigationMutation,
 } from "../../services/api";
+import { canModifyData } from "../../utils/roles";
 import "./Investigations.css";
 
 const Investigations = () => {
@@ -470,9 +471,7 @@ const Investigations = () => {
     <div className="investigations-page">
       <div className="page-header">
         <h2>إدارة التحقيقات</h2>
-        {(user?.role === "President" ||
-          user?.role === "GeneralManager" ||
-          user?.role === "DepartmentManager") && (
+        {canModifyData(user) && (
           <button
             className="btn btn-primary"
             onClick={() => {
@@ -568,9 +567,7 @@ const Investigations = () => {
                   </a>
                 )}
               </div>
-              {(user?.role === "President" ||
-                user?.role === "GeneralManager" ||
-                user?.role === "DepartmentManager") && (
+              {canModifyData(user) && (
                 <div className="card-actions">
                   <button
                     className="btn btn-sm btn-edit"

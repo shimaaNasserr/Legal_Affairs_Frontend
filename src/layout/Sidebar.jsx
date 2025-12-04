@@ -28,8 +28,6 @@ const Sidebar = () => {
         { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
         { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" },
         { to: "/contracts", icon: "ri-file-text-line", label: "العقود" },
-        { to: "/contracts", icon: "ri-timer-2-line", label: "ستنتهي قريباً", state: { filter: "expiring" } },
-        { to: "/contracts", icon: "ri-time-line", label: "العقود المنتهية", state: { filter: "expired" } },
         { to: "/fatwas", icon: "ri-book-open-line", label: "الفتاوى" },
         {
           to: "/reports",
@@ -45,16 +43,13 @@ const Sidebar = () => {
         { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
         { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" },
         { to: "/contracts", icon: "ri-file-text-line", label: "العقود" },
-        { to: "/contracts", icon: "ri-timer-2-line", label: "ستنتهي قريباً", state: { filter: "expiring" } },
-        { to: "/contracts", icon: "ri-time-line", label: "العقود المنتهية", state: { filter: "expired" } },
         { to: "/fatwas", icon: "ri-book-open-line", label: "الفتاوى" }
       );
     }
-    // محامي: قضاياه وبروفايله
+    // محامي: قضاياه فقط
     else if (role === ROLES.LAWYER) {
       links.push(
-        { to: "/profile", icon: "ri-user-settings-line", label: "البروفايل" },
-        { to: "/cases", icon: "ri-file-list-3-line", label: "قضاياي" }
+        { to: "/cases", icon: "ri-file-list-3-line", label: "قضايا" }
       );
     }
     // سكرتير: قضايا و تحقيقات و تظلمات

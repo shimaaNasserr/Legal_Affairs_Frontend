@@ -7,6 +7,7 @@ import {
   useUpdateAppealMutation,
   useDeleteAppealMutation,
 } from "../../services/api";
+import { canModifyData } from "../../utils/roles";
 import "./Appeals.css";
 
 const Appeals = () => {
@@ -264,9 +265,7 @@ const Appeals = () => {
     <div className="appeals-page">
       <div className="page-header">
         <h2>إدارة التظلمات</h2>
-        {(user?.role === "President" ||
-          user?.role === "GeneralManager" ||
-          user?.role === "DepartmentManager") && (
+        {canModifyData(user) && (
           <button
             className="btn btn-primary"
             onClick={() => {
@@ -352,9 +351,7 @@ const Appeals = () => {
                   </a>
                 )}
               </div>
-              {(user?.role === "President" ||
-                user?.role === "GeneralManager" ||
-                user?.role === "DepartmentManager") && (
+              {canModifyData(user) && (
                 <div className="card-actions">
                   <button
                     className="btn btn-sm btn-edit"

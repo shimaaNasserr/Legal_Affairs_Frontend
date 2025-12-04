@@ -1,6 +1,7 @@
 import React, { useContext } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { getRoleBasedLinks } from "../../utils/roles";
 import "./Home.css";
 
 export const Home = () => {
@@ -18,65 +19,30 @@ export const Home = () => {
     return roleNames[role] || role;
   };
 
-  const quickActions = [
-    {
-      title: "القضايا",
-      icon: "ri-file-list-3-line",
-      path: "/cases",
-      color: "var(--primary-color)",
-    },
-    {
-      title: "التحقيقات",
-      icon: "ri-search-line",
-      path: "/investigations",
-      color: "var(--warning)",
-    },
-    {
-      title: "التظلمات",
-      icon: "ri-alert-line",
-      path: "/appeals",
-      color: "var(--error)",
-    },
-    {
-      title: "العقود",
-      icon: "ri-file-text-line",
-      path: "/contracts",
-      color: "var(--info)",
-    },
-    {
-      title: "الفتاوى",
-      icon: "ri-book-open-line",
-      path: "/fatwas",
-      color: "var(--success)",
-    },
-  ];
+  // الحصول على الروابط المسموحة حسب دور المستخدم (نفس منطق الـ Sidebar)
+  const roleLinks = getRoleBasedLinks(user?.role);
 
-  // إضافة روابط إضافية حسب الدور
-  if (user?.role === "President" || user?.role === "GeneralManager") {
-    quickActions.push(
-      {
-        title: "إدارة المستخدمين",
-        icon: "ri-team-line",
-        path: "/users",
-        color: "#64748b",
-      },
-      {
-        title: "التقارير",
-        icon: "ri-bar-chart-line",
-        path: "/reports",
-        color: "var(--secondary-color)",
-      }
-    );
-  }
+  // تحويل الروابط إلى quickActions مع إضافة الألوان
+  const getColorForPath = (path) => {
+    const colorMap = {
+      "/users": "#64748b",
+      "/cases": "var(--primary-color)",
+      "/investigations": "var(--warning)",
+      "/appeals": "var(--error)",
+      "/contracts": "var(--info)",
+      "/fatwas": "var(--success)",
+      "/reports": "var(--secondary-color)",
+      "/profile": "var(--primary-color)",
+    };
+    return colorMap[path] || "var(--primary-color)";
+  };
 
-  if (user?.role === "Lawyer") {
-    quickActions.unshift({
-      title: "البروفايل",
-      icon: "ri-user-settings-line",
-      path: "/profile",
-      color: "var(--primary-color)",
-    });
-  }
+  const quickActions = roleLinks.map((link) => ({
+    title: link.label,
+    icon: link.icon,
+    path: link.to,
+    color: getColorForPath(link.to),
+  }));
 
   return (
     <div className="home-page">

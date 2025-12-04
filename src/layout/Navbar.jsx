@@ -3,7 +3,7 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import "./layout.css";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useGetContractsQuery } from "../services/api";
+import { useGetContractsQuery, useGetAppealsQuery } from "../services/api";
 
 const Navbar = ({ onMenuToggle }) => {
   const { user, logout } = useContext(AuthContext);
@@ -15,9 +15,10 @@ const Navbar = ({ onMenuToggle }) => {
   // Server-side counts for expired and expiring contracts (minimizes payload)
   // Enable auto-refresh every 60s
   const polling = { pollingInterval: 60000, refetchOnMountOrArgChange: true };
-  const { data: expiredResp } = useGetContractsQuery({ expiry: "expired", page: 1, page_size: 1 }, polling);
-  const { data: expiringResp } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 1 }, polling);
-  const { data: expiringListResp } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 5 }, polling);
+  const { data: expiredResp, isFetching: loadingExpired, refetch: refetchExpiredCount } = useGetContractsQuery({ expiry: "expired", page: 1, page_size: 1 }, polling);
+  const { data: expiringResp, isFetching: loadingExpiring, refetch: refetchExpiringCount } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 1 }, polling);
+  const { data: expiringListResp, isFetching: loadingExpiringList, refetch: refetchExpiringList } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 5 }, polling);
+  const { data: expiredListResp, isFetching: loadingExpiredList, refetch: refetchExpiredList } = useGetContractsQuery({ expiry: "expired", page: 1, page_size: 5 }, polling);
   const expiredCount = typeof expiredResp === "object" ? expiredResp?.count ?? 0 : 0;
   const expiringCount = typeof expiringResp === "object" ? expiringResp?.count ?? 0 : 0;
   const expiringList = (expiringListResp?.results || expiringListResp || []).slice().sort((a, b) => {
@@ -26,10 +27,49 @@ const Navbar = ({ onMenuToggle }) => {
     return da - db;
   });
 
-  const totalAlerts = (expiredCount || 0) + (expiringCount || 0);
+  // Appeals: lightweight recent list to show status summary
+  const { data: appealsResp, isFetching: loadingAppeals, refetch: refetchAppeals } = useGetAppealsQuery({ page: 1, page_size: 5 }, polling);
+  const appealsList = (appealsResp?.results || appealsResp || []).slice(0, 5);
+  const appealsCount = typeof appealsResp === "object" ? (appealsResp?.count ?? appealsList.length) : 0;
 
-  // Role-based visibility (only leadership and department managers see notifications)
-  const canSeeNotifications = ["President", "GeneralManager", "DepartmentManager"].includes(user?.role);
+  // Close on Escape
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpenNotif(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Helpers
+  const arabicStatus = (s) => ({
+    submitted: 'مقدم',
+    under_review: 'قيد المراجعة',
+    accepted: 'مقبول',
+    rejected: 'مرفوض',
+    withdrawn: 'منسحب',
+  }[s] || s);
+
+  const relativeDays = (dateStr) => {
+    if (!dateStr) return '';
+    const end = new Date(dateStr);
+    const today = new Date();
+    const oneDay = 24 * 60 * 60 * 1000;
+    const diff = Math.round((end - today) / oneDay);
+    if (diff > 0) return `يتبقى ${diff} يوم`;
+    if (diff === 0) return 'ينتهي اليوم';
+    return `انتهى منذ ${Math.abs(diff)} يوم`;
+  };
+
+  // Role-based visibility per section
+  const role = user?.role;
+  const canSeeContracts = ["President", "GeneralManager", "DepartmentManager"].includes(role);
+  const canSeeAppeals = ["President", "GeneralManager", "DepartmentManager", "Lawyer", "Secretary"].includes(role);
+  // Badge sums only what the role is allowed to see
+  const totalAlerts = (canSeeContracts ? ((expiredCount || 0) + (expiringCount || 0)) : 0) + (canSeeAppeals ? (appealsCount || 0) : 0);
+
+  // Show bell if user can see any section
+  const canSeeNotifications = canSeeContracts || canSeeAppeals;
 
   // Play a short beep using Web Audio API
   const playBeep = () => {
@@ -105,58 +145,147 @@ const Navbar = ({ onMenuToggle }) => {
           {openNotif && (
             <div className="notification-dropdown" onClick={(e) => e.stopPropagation()}>
               <div className="notification-header">الإشعارات</div>
-              <div className="notification-item">
-                <div>
-                  <strong>عقود منتهية</strong>
-                  <div className="notification-sub">عدد: {expiredCount}</div>
+              {(loadingExpired || loadingExpiring || loadingExpiringList || loadingExpiredList || loadingAppeals) && (
+                <div className="notification-item" style={{ opacity: 0.8 }}>
+                  <i className="ri-loader-4-line ri-spin" style={{ marginInlineEnd: 6 }}></i>
+                  جاري التحديث...
                 </div>
+              )}
+              <div className="notification-item" style={{ justifyContent: 'space-between' }}>
+                {canSeeContracts && (
+                  <button
+                    className="btn btn-xs btn-link"
+                    onClick={() => { setOpenNotif(false); navigate('/contracts'); }}
+                  >
+                    عرض كل العقود
+                  </button>
+                )}
                 <button
                   className="btn btn-xs btn-link"
                   onClick={() => {
-                    setOpenNotif(false);
-                    navigate("/contracts", { state: { filter: "expired" } });
+                    if (canSeeContracts) {
+                      refetchExpiredCount();
+                      refetchExpiringCount();
+                      refetchExpiringList();
+                      refetchExpiredList();
+                    }
+                    if (canSeeAppeals) refetchAppeals();
                   }}
+                  title="تحديث الآن"
                 >
-                  عرض
+                  تحديث الآن
                 </button>
               </div>
-              <div className="notification-item">
-                <div>
-                  <strong>ستنتهي خلال شهرين</strong>
-                  <div className="notification-sub">عدد: {expiringCount}</div>
-                </div>
-                <button
-                  className="btn btn-xs btn-link"
-                  onClick={() => {
-                    setOpenNotif(false);
-                    navigate("/contracts", { state: { filter: "expiring" } });
-                  }}
-                >
-                  عرض
-                </button>
-              </div>
-              {expiringList.length > 0 && (
+              {canSeeContracts && (
                 <>
-                  <div className="notification-header">أقرب 5 تواريخ انتهاء</div>
-                  {expiringList.map((c) => (
-                    <div key={c.id} className="notification-item">
-                      <div>
-                        <div className="notification-sub">عقد #{c.contract_number || c.general_number || "-"}</div>
-                        <div style={{ fontSize: 12 }}>
-                          ينتهي في: {c.end_date ? new Date(c.end_date).toLocaleDateString("ar") : "-"}
+                  <div className="notification-item">
+                    <div>
+                      <strong>عقود منتهية</strong>
+                      <div className="notification-sub">عدد: {expiredCount}</div>
+                    </div>
+                    <button
+                      className="btn btn-xs btn-link"
+                      onClick={() => {
+                        setOpenNotif(false);
+                        navigate("/contracts", { state: { filter: "expired" } });
+                      }}
+                    >
+                      عرض
+                    </button>
+                  </div>
+                  <div className="notification-item">
+                    <div>
+                      <strong>ستنتهي خلال شهرين</strong>
+                      <div className="notification-sub">عدد: {expiringCount}</div>
+                    </div>
+                    <button
+                      className="btn btn-xs btn-link"
+                      onClick={() => {
+                        setOpenNotif(false);
+                        navigate("/contracts", { state: { filter: "expiring" } });
+                      }}
+                    >
+                      عرض
+                    </button>
+                  </div>
+                  {expiredListResp && (expiredListResp.results || expiredListResp || []).length > 0 && (
+                    <>
+                      <div className="notification-header">أحدث 5 عقود منتهية</div>
+                      {(expiredListResp.results || expiredListResp || []).slice(0,5).map((c) => (
+                        <div key={c.id} className="notification-item">
+                          <div>
+                            <div className="notification-sub">عقد #{c.contract_number || c.general_number || "-"}</div>
+                            <div style={{ fontSize: 12 }}>{relativeDays(c.end_date)}</div>
+                          </div>
+                          <button
+                            className="btn btn-xs btn-link"
+                            onClick={() => {
+                              setOpenNotif(false);
+                              navigate("/contracts", { state: { filter: "expired" } });
+                            }}
+                          >
+                            فتح
+                          </button>
                         </div>
+                      ))}
+                    </>
+                  )}
+                  {expiringList.length > 0 && (
+                    <>
+                      <div className="notification-header">أقرب 5 تواريخ انتهاء</div>
+                      {expiringList.map((c) => (
+                        <div key={c.id} className="notification-item">
+                          <div>
+                            <div className="notification-sub">عقد #{c.contract_number || c.general_number || "-"}</div>
+                            <div style={{ fontSize: 12 }}>{relativeDays(c.end_date)}</div>
+                          </div>
+                          <button
+                            className="btn btn-xs btn-link"
+                            onClick={() => {
+                              setOpenNotif(false);
+                              navigate("/contracts", { state: { filter: "expiring" } });
+                            }}
+                          >
+                            فتح
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
+              {canSeeAppeals && appealsList.length > 0 && (
+                <>
+                  <div className="notification-header">موقف الطعن (آخر 5)</div>
+                  {appealsList.map((a) => (
+                    <div key={a.id} className="notification-item">
+                      <div>
+                        <div className="notification-sub">
+                          {a.investigation_title ? (
+                            <>
+                              تحقيق: {a.investigation_title}
+                              {a.investigation_general_number ? ` (${a.investigation_general_number})` : ""}
+                            </>
+                          ) : (
+                            <>تظلم رقم {a.appeal_number || "-"}</>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 12 }}>الحالة: {arabicStatus(a.status)}</div>
                       </div>
                       <button
                         className="btn btn-xs btn-link"
                         onClick={() => {
                           setOpenNotif(false);
-                          navigate("/contracts", { state: { filter: "expiring" } });
+                          navigate("/appeals");
                         }}
                       >
                         فتح
                       </button>
                     </div>
                   ))}
+                  <div className="notification-footer" style={{ textAlign: 'center', padding: '6px 0' }}>
+                    <button className="btn btn-xs btn-link" onClick={() => { setOpenNotif(false); navigate('/appeals'); }}>عرض كل التظلمات</button>
+                  </div>
                 </>
               )}
               {totalAlerts === 0 && (
@@ -179,9 +308,6 @@ const Navbar = ({ onMenuToggle }) => {
             <span className="user-role">{getRoleName(user.role)}</span>
           </div>
         )}
-        <div className="profile-icon">
-          <i className="ri-user-3-line"></i>
-        </div>
         <button onClick={handleLogout} className="logout-btn">
           <i className="ri-logout-box-r-line"></i>
           <span className="logout-text">تسجيل الخروج</span>

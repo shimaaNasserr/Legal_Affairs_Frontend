@@ -2,6 +2,7 @@ import React, { useState, useMemo, useContext } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useGetCasesQuery } from "../../services/api";
+import { canModifyData } from "../../utils/roles";
 import "./Cases.css";
 
 const Cases = () => {
@@ -160,9 +161,7 @@ const Cases = () => {
                   >
                     <i className="ri-eye-line"></i> تفاصيل
                   </button>
-                  {(user?.role === "President" ||
-                    user?.role === "GeneralManager" ||
-                    user?.role === "DepartmentManager") && (
+                  {canModifyData(user) && (
                     <button
                       className="btn btn-sm btn-edit"
                       onClick={() => handleEdit(c)}

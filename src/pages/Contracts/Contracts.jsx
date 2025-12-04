@@ -8,6 +8,7 @@ import "./Contracts.css";
 const Contracts = () => {
   const { user } = useContext(AuthContext);
   const [showModal, setShowModal] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1); // 1: Basic info, 2: Content/Progress, 3: Dates/Extras
   const [editingContract, setEditingContract] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -27,6 +28,8 @@ const Contracts = () => {
     file: null,
   });
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   // Use cached queries - data is automatically cached and reused
   const queryParams = useMemo(() => ({
@@ -50,18 +53,42 @@ const Contracts = () => {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const handleChange = (e) => {
-    if (e.target.name === "file") {
-      setFormData({ ...formData, file: e.target.files[0] });
+    const { name, files, value } = e.target;
+    if (name === "file") {
+      setFormData({ ...formData, file: files[0] });
     } else {
-      setFormData({ ...formData, [e.target.name]: e.target.value });
+      setFormData({ ...formData, [name]: value });
+    }
+    // Clear field error on edit
+    if (fieldErrors?.[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
+
+    // Validate all required fields across steps before submit
+    const validStep1 = validateStep(1);
+    const validStep2 = validateStep(2);
+    const validStep3 = validateStep(3);
+    if (!validStep1) {
+      setCurrentStep(1);
+      return;
+    }
+    if (!validStep2) {
+      setCurrentStep(2);
+      return;
+    }
+    if (!validStep3) {
+      setCurrentStep(3);
+      return;
+    }
 
     try {
+      setSubmitting(true);
       const submitData = new FormData();
       Object.keys(formData).forEach((key) => {
         if (key === "file") {
@@ -95,13 +122,20 @@ const Contracts = () => {
       console.error("Error saving contract:", err);
       const data = err?.response?.data;
       const apiDetail = data?.detail || data?.message;
-      // If serializer error returns a dict of field errors
-      const fieldErrors = data && typeof data === "object" && !Array.isArray(data)
-        ? Object.entries(data)
-            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : String(v)}`)
-            .join(" | ")
-        : null;
-      setError(apiDetail || fieldErrors || "فشل في حفظ العقد");
+      // Map Django/DRF field errors to UI
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        const fe = {};
+        Object.entries(data).forEach(([k, v]) => {
+          if (k === "detail" || k === "message") return;
+          fe[k] = Array.isArray(v) ? v.join("، ") : String(v);
+        });
+        if (Object.keys(fe).length) setFieldErrors(fe);
+      }
+      // General error fallback
+      setError(apiDetail || "فشل في حفظ العقد");
+    }
+    finally {
+      setSubmitting(false);
     }
   };
 
@@ -118,6 +152,7 @@ const Contracts = () => {
       department: contract.department || "",
       file: null,
     });
+    setCurrentStep(1);
     setShowModal(true);
   };
 
@@ -146,6 +181,25 @@ const Contracts = () => {
       department: "",
       file: null,
     });
+    setFieldErrors({});
+  };
+
+  // Validate required fields for a specific step and set fieldErrors
+  const validateStep = (step) => {
+    const errs = {};
+    if (step === 1) {
+      if (!formData.date_received) errs.date_received = "هذا الحقل مطلوب";
+      if (!formData.contract_number) errs.contract_number = "هذا الحقل مطلوب";
+      if (!formData.contract_type) errs.contract_type = "اختر نوع العقد";
+    } else if (step === 2) {
+      if (!formData.content) errs.content = "هذا الحقل مطلوب";
+      if (!formData.progress) errs.progress = "هذا الحقل مطلوب";
+    } else if (step === 3) {
+      if (!formData.end_date) errs.end_date = "هذا الحقل مطلوب";
+      if (!formData.department) errs.department = "هذا الحقل مطلوب";
+    }
+    setFieldErrors((prev) => ({ ...prev, ...errs }));
+    return Object.keys(errs).length === 0;
   };
 
   const getTypeName = (type) => {
@@ -156,6 +210,28 @@ const Contracts = () => {
       protocol: "بروتوكول إسناد",
     };
     return typeNames[type] || type;
+  };
+
+  const handleStepClick = (targetStep) => {
+    if (targetStep === currentStep) return;
+    if (targetStep < currentStep) {
+      setCurrentStep(targetStep);
+      return;
+    }
+    const ok1 = targetStep >= 2 ? validateStep(1) : true;
+    const ok2 = targetStep >= 3 ? validateStep(2) : true;
+    if (ok1 && ok2) setCurrentStep(targetStep);
+  };
+
+  const handleNext = () => {
+    if (currentStep === 1) {
+      if (validateStep(1)) setCurrentStep(2);
+      return;
+    }
+    if (currentStep === 2) {
+      if (validateStep(2)) setCurrentStep(3);
+      return;
+    }
   };
 
   useEffect(() => {
@@ -307,10 +383,14 @@ const Contracts = () => {
   };
 
   const filteredContracts = contracts.filter((contract) => {
+    const term = (searchTerm || "").toLowerCase();
+    const contractNumberStr = String(contract.contract_number ?? "").toLowerCase();
+    const generalNumberStr = String(contract.general_number ?? "").toLowerCase();
+    const contentStr = String(contract.content ?? "").toLowerCase();
     const matchesSearch =
-      contract.contract_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contract.general_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contract.content?.toLowerCase().includes(searchTerm.toLowerCase());
+      contractNumberStr.includes(term) ||
+      generalNumberStr.includes(term) ||
+      contentStr.includes(term);
 
     const matchesType =
       typeFilter === "all" || contract.contract_type === typeFilter;
@@ -347,6 +427,7 @@ const Contracts = () => {
               onClick={() => {
                 setEditingContract(null);
                 resetForm();
+                setCurrentStep(1);
                 setShowModal(true);
               }}
             >
@@ -601,133 +682,222 @@ const Contracts = () => {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="contract-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>تاريخ ورود العقد *</label>
-                  <input
-                    type="date"
-                    name="date_received"
-                    value={formData.date_received}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>رقم حصر العقود *</label>
-                  <input
-                    type="text"
-                    name="contract_number"
-                    value={formData.contract_number}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
+              {/* Step indicator */}
+              <div className="d-flex mb-3 justify-content-center">
+                <span className="badge bg-primary" style={{ userSelect: 'none' }}>
+                  خطوه {currentStep}
+                </span>
               </div>
 
-              <div className="form-group">
-                <label>نوع العقد *</label>
-                <select
-                  name="contract_type"
-                  value={formData.contract_type}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">اختر النوع</option>
-                  <option value="tender">مناقصة</option>
-                  <option value="practice">ممارسة</option>
-                  <option value="direct">أمر مباشر</option>
-                  <option value="protocol">بروتوكول إسناد</option>
-                </select>
-              </div>
+              {/* Step 1: Basic info */}
+              {currentStep === 1 && (
+                <>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>تاريخ ورود العقد *</label>
+                      <input
+                        type="date"
+                        name="date_received"
+                        value={formData.date_received}
+                        onChange={handleChange}
+                        required
+                        className={fieldErrors.date_received ? "is-invalid" : ""}
+                      />
+                      {fieldErrors.date_received && (
+                        <div className="invalid-feedback d-block">{fieldErrors.date_received}</div>
+                      )}
+                    </div>
 
-              <div className="form-group">
-                <label>مضمون العقد *</label>
-                <textarea
-                  name="content"
-                  value={formData.content}
-                  onChange={handleChange}
-                  rows="4"
-                  required
-                ></textarea>
-              </div>
+                    <div className="form-group">
+                      <label>رقم حصر العقود *</label>
+                      <input
+                        type="text"
+                        name="contract_number"
+                        value={formData.contract_number}
+                        onChange={handleChange}
+                        required
+                        className={fieldErrors.contract_number ? "is-invalid" : ""}
+                      />
+                      {fieldErrors.contract_number && (
+                        <div className="invalid-feedback d-block">{fieldErrors.contract_number}</div>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="form-group">
-                <label>ما تم في العقد *</label>
-                <textarea
-                  name="progress"
-                  value={formData.progress}
-                  onChange={handleChange}
-                  rows="4"
-                  required
-                ></textarea>
-              </div>
+                  <div className="form-group">
+                    <label>نوع العقد *</label>
+                    <select
+                      name="contract_type"
+                      value={formData.contract_type}
+                      onChange={handleChange}
+                      required
+                      className={fieldErrors.contract_type ? "is-invalid" : ""}
+                    >
+                      <option value="">اختر النوع</option>
+                      <option value="tender">مناقصة</option>
+                      <option value="practice">ممارسة</option>
+                      <option value="direct">أمر مباشر</option>
+                      <option value="protocol">بروتوكول إسناد</option>
+                    </select>
+                    {fieldErrors.contract_type && (
+                      <div className="invalid-feedback d-block">{fieldErrors.contract_type}</div>
+                    )}
+                  </div>
+                </>
+              )}
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>تاريخ الحفظ</label>
-                  <input
-                    type="date"
-                    name="archive_date"
-                    value={formData.archive_date}
-                    onChange={handleChange}
-                  />
-                </div>
+              {/* Step 2: Content & Progress */}
+              {currentStep === 2 && (
+                <>
+                  <div className="form-group">
+                    <label>مضمون العقد *</label>
+                    <textarea
+                      name="content"
+                      value={formData.content}
+                      onChange={handleChange}
+                      rows="4"
+                      required
+                      className={fieldErrors.content ? "is-invalid" : ""}
+                    ></textarea>
+                    {fieldErrors.content && (
+                      <div className="invalid-feedback d-block">{fieldErrors.content}</div>
+                    )}
+                  </div>
 
-                <div className="form-group">
-                  <label>تاريخ الانتهاء</label>
-                  <input
-                    type="date"
-                    name="end_date"
-                    value={formData.end_date}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
+                  <div className="form-group">
+                    <label>ما تم في العقد *</label>
+                    <textarea
+                      name="progress"
+                      value={formData.progress}
+                      onChange={handleChange}
+                      rows="4"
+                      required
+                      className={fieldErrors.progress ? "is-invalid" : ""}
+                    ></textarea>
+                    {fieldErrors.progress && (
+                      <div className="invalid-feedback d-block">{fieldErrors.progress}</div>
+                    )}
+                  </div>
+                </>
+              )}
 
-              <div className="form-group">
-                <label>الإدارة</label>
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                >
-                  <option value="">اختر الإدارة</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Step 3: Dates / Optional fields */}
+              {currentStep === 3 && (
+                <>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>تاريخ الحفظ</label>
+                      <input
+                        type="date"
+                        name="archive_date"
+                        value={formData.archive_date}
+                        onChange={handleChange}
+                      />
+                    </div>
 
-              <div className="form-group">
-                <label>رفع ملف العقد (PDF)</label>
-                <input
-                  type="file"
-                  name="file"
-                  accept=".pdf"
-                  onChange={handleChange}
-                />
-              </div>
+                    <div className="form-group">
+                      <label>تاريخ الانتهاء</label>
+                      <input
+                        type="date"
+                        name="end_date"
+                        value={formData.end_date}
+                        onChange={handleChange}
+                        required
+                        className={fieldErrors.end_date ? "is-invalid" : ""}
+                      />
+                      {fieldErrors.end_date && (
+                        <div className="invalid-feedback d-block">{fieldErrors.end_date}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>الإدارة</label>
+                    <select
+                      name="department"
+                      value={formData.department}
+                      onChange={handleChange}
+                      required
+                      className={fieldErrors.department ? "is-invalid" : ""}
+                    >
+                      <option value="">اختر الإدارة</option>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors.department && (
+                      <div className="invalid-feedback d-block">{fieldErrors.department}</div>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>رفع ملف العقد (PDF)</label>
+                    <input
+                      type="file"
+                      name="file"
+                      accept=".pdf"
+                      onChange={handleChange}
+                      className={fieldErrors.file ? "is-invalid" : ""}
+                    />
+                    {fieldErrors.file && (
+                      <div className="invalid-feedback d-block">{fieldErrors.file}</div>
+                    )}
+                  </div>
+                </>
+              )}
 
               {(error || contractsError) && (
-        <div className="alert alert-danger">
-          {error || (contractsError && String(contractsError))}
-        </div>
-      )}
+                <div className="alert alert-danger">
+                  {error || (contractsError && String(contractsError))}
+                </div>
+              )}
 
-              <div className="modal-actions">
-                <button type="submit" className="btn btn-primary">
-                  {editingContract ? "تحديث" : "إضافة"}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowModal(false)}
-                >
-                  إلغاء
-                </button>
+              {/* Step controls */}
+              <div className="modal-actions d-flex justify-content-between">
+                <div>
+                  {currentStep > 1 && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary me-2"
+                      onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
+                    >
+                      السابق
+                    </button>
+                  )}
+                </div>
+                <div>
+                  {currentStep < 3 && (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={submitting}
+                      onClick={handleNext}
+                    >
+                      التالي
+                    </button>
+                  )}
+                  {currentStep === 3 && (
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={
+                        submitting ||
+                        !(formData.date_received && formData.contract_number && formData.contract_type && formData.content && formData.progress && formData.end_date && formData.department)
+                      }
+                    >
+                      {submitting ? "جارٍ الحفظ..." : (editingContract ? "تحديث" : "إضافة")}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary ms-2"
+                    onClick={() => setShowModal(false)}
+                  >
+                    إلغاء
+                  </button>
+                </div>
               </div>
             </form>
           </div>

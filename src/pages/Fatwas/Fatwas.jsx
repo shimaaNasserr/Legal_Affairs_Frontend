@@ -7,6 +7,7 @@ import "./Fatwas.css";
 const Fatwas = () => {
   const { user } = useContext(AuthContext);
   const [showModal, setShowModal] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1); // 1: request, 2: result, 3: department/file
   const [editingFatwa, setEditingFatwa] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
@@ -18,6 +19,8 @@ const Fatwas = () => {
     file: null,
   });
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   const { data: fatwasData, isLoading: loading, error: fatwasError } = useGetFatwasQuery({ page, page_size: pageSize });
   const { data: departments = [] } = useGetDepartmentsQuery();
@@ -27,18 +30,31 @@ const Fatwas = () => {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const handleChange = (e) => {
-    if (e.target.name === "file") {
-      setFormData({ ...formData, file: e.target.files[0] });
+    const { name, files, value } = e.target;
+    if (name === "file") {
+      setFormData({ ...formData, file: files[0] });
     } else {
-      setFormData({ ...formData, [e.target.name]: e.target.value });
+      setFormData({ ...formData, [name]: value });
+    }
+    if (fieldErrors?.[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
+
+    // Validate all steps before submit
+    const v1 = validateStep(1);
+    const v2 = validateStep(2); // optional but run to clear messages
+    const v3 = validateStep(3);
+    if (!v1) { setCurrentStep(1); return; }
+    if (!v3) { setCurrentStep(3); return; }
 
     try {
+      setSubmitting(true);
       const submitData = new FormData();
       Object.keys(formData).forEach((key) => {
         if (key === "file") {
@@ -67,8 +83,19 @@ const Fatwas = () => {
       window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error saving fatwa:", err);
-      const apiDetail = err?.response?.data?.detail || err?.response?.data?.message;
+      const data = err?.response?.data;
+      const apiDetail = data?.detail || data?.message;
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        const fe = {};
+        Object.entries(data).forEach(([k, v]) => {
+          if (k === "detail" || k === "message") return;
+          fe[k] = Array.isArray(v) ? v.join("، ") : String(v);
+        });
+        if (Object.keys(fe).length) setFieldErrors(fe);
+      }
       setError(apiDetail || "فشل في حفظ الفتوى");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -80,6 +107,7 @@ const Fatwas = () => {
       department: fatwa.department || "",
       file: null,
     });
+    setCurrentStep(1);
     setShowModal(true);
   };
 
@@ -103,14 +131,44 @@ const Fatwas = () => {
       department: "",
       file: null,
     });
+    setFieldErrors({});
   };
 
-  const filteredFatwas = fatwas.filter(
-    (fatwa) =>
-      fatwa.general_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      fatwa.request_content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      fatwa.result?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const validateStep = (step) => {
+    const errs = {};
+    if (step === 1) {
+      if (!formData.request_content) errs.request_content = "هذا الحقل مطلوب";
+    } else if (step === 3) {
+      if (!formData.department) errs.department = "هذا الحقل مطلوب";
+      // file optional
+    }
+    setFieldErrors((prev) => ({ ...prev, ...errs }));
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleNext = () => {
+    if (currentStep === 1) {
+      if (validateStep(1)) setCurrentStep(2);
+      return;
+    }
+    if (currentStep === 2) {
+      // Step 2 has no required fields
+      setCurrentStep(3);
+      return;
+    }
+  };
+
+  const filteredFatwas = fatwas.filter((fatwa) => {
+    const term = (searchTerm || "").toLowerCase();
+    const generalNumberStr = String(fatwa.general_number ?? "").toLowerCase();
+    const requestContentStr = String(fatwa.request_content ?? "").toLowerCase();
+    const resultStr = String(fatwa.result ?? "").toLowerCase();
+    return (
+      generalNumberStr.includes(term) ||
+      requestContentStr.includes(term) ||
+      resultStr.includes(term)
+    );
+  });
 
   if (loading) {
     return <div className="loading">جاري التحميل...</div>;
@@ -128,6 +186,7 @@ const Fatwas = () => {
             onClick={() => {
               setEditingFatwa(null);
               resetForm();
+              setCurrentStep(1);
               setShowModal(true);
             }}
           >
@@ -277,71 +336,128 @@ const Fatwas = () => {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="fatwa-form">
-              <div className="form-group">
-                <label>محتوى الطلب *</label>
-                <textarea
-                  name="request_content"
-                  value={formData.request_content}
-                  onChange={handleChange}
-                  rows="6"
-                  required
-                ></textarea>
+              {/* Step indicator */}
+              <div className="d-flex mb-3 justify-content-center">
+                <span className="badge bg-primary" style={{ userSelect: 'none' }}>
+                  خطوه {currentStep}
+                </span>
               </div>
 
-              <div className="form-group">
-                <label>النتيجة</label>
-                <textarea
-                  name="result"
-                  value={formData.result}
-                  onChange={handleChange}
-                  rows="6"
-                ></textarea>
-              </div>
+              {/* Step 1: Request content */}
+              {currentStep === 1 && (
+                <div className="form-group">
+                  <label>محتوى الطلب *</label>
+                  <textarea
+                    name="request_content"
+                    value={formData.request_content}
+                    onChange={handleChange}
+                    rows="6"
+                    required
+                    className={fieldErrors.request_content ? "is-invalid" : ""}
+                  ></textarea>
+                  {fieldErrors.request_content && (
+                    <div className="invalid-feedback d-block">{fieldErrors.request_content}</div>
+                  )}
+                </div>
+              )}
 
-              <div className="form-group">
-                <label>الإدارة *</label>
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">اختر الإدارة</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Step 2: Result (optional) */}
+              {currentStep === 2 && (
+                <div className="form-group">
+                  <label>النتيجة</label>
+                  <textarea
+                    name="result"
+                    value={formData.result}
+                    onChange={handleChange}
+                    rows="6"
+                  ></textarea>
+                </div>
+              )}
 
-              <div className="form-group">
-                <label>رفع ملف الفتوى (PDF)</label>
-                <input
-                  type="file"
-                  name="file"
-                  accept=".pdf"
-                  onChange={handleChange}
-                />
-              </div>
+              {/* Step 3: Department/File */}
+              {currentStep === 3 && (
+                <>
+                  <div className="form-group">
+                    <label>الإدارة *</label>
+                    <select
+                      name="department"
+                      value={formData.department}
+                      onChange={handleChange}
+                      required
+                      className={fieldErrors.department ? "is-invalid" : ""}
+                    >
+                      <option value="">اختر الإدارة</option>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors.department && (
+                      <div className="invalid-feedback d-block">{fieldErrors.department}</div>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>رفع ملف الفتوى (PDF)</label>
+                    <input
+                      type="file"
+                      name="file"
+                      accept=".pdf"
+                      onChange={handleChange}
+                    />
+                  </div>
+                </>
+              )}
 
               {(error || fatwasError) && (
-        <div className="alert alert-danger">
-          {error || (fatwasError && String(fatwasError))}
-        </div>
-      )}
+                <div className="alert alert-danger">
+                  {error || (fatwasError && String(fatwasError))}
+                </div>
+              )}
 
-              <div className="modal-actions">
-                <button type="submit" className="btn btn-primary">
-                  {editingFatwa ? "تحديث" : "إضافة"}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowModal(false)}
-                >
-                  إلغاء
-                </button>
+              <div className="modal-actions d-flex justify-content-between">
+                <div>
+                  {currentStep > 1 && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary me-2"
+                      onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
+                    >
+                      السابق
+                    </button>
+                  )}
+                </div>
+                <div>
+                  {currentStep < 3 && (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={submitting}
+                      onClick={handleNext}
+                    >
+                      التالي
+                    </button>
+                  )}
+                  {currentStep === 3 && (
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={
+                        submitting || !(formData.request_content && formData.department)
+                      }
+                    >
+                      {submitting ? "جارٍ الحفظ..." : (editingFatwa ? "تحديث" : "إضافة")}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary ms-2"
+                    onClick={() => setShowModal(false)}
+                  >
+                    إلغاء
+                  </button>
+                </div>
               </div>
             </form>
           </div>

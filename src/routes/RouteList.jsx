@@ -10,7 +10,7 @@ import CaseDetails from "../pages/Cases/CaseDetails";
 import Investigations from "../pages/Investigations/Investigations";
 import Appeals from "../pages/Appeals/Appeals";
 import Contracts from "../pages/Contracts/Contracts";
-import Fatwas from "../pages/fatwas/Fatwas";
+import Fatwas from "../pages/Fatwas/Fatwas";
 import Reports from "../pages/Reports/Reports";
 import Users from "../pages/Users/Users";
 import Profile from "../pages/Profile/Profile";
