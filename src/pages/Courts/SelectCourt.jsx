@@ -1,54 +1,44 @@
-import React, { useState, useEffect } from "react";
-import axiosInstance from "../../apis/axiosInstance";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BiBuilding } from "react-icons/bi";
 import { FiLayers } from "react-icons/fi";
 import "./courtsStyles.css";
 
+// RTK Query
+import { useGetCourtsQuery } from "../../services/api";
+
 export default function SelectCourt() {
-  const [courts, setCourts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [showDivisions, setShowDivisions] = useState(null);
   const navigate = useNavigate();
+  const [showDivisions, setShowDivisions] = useState(null);
 
-  useEffect(() => {
-    fetchCourts();
-  }, []);
+  // fetch courts using RTK Query
+  const { data, error, isLoading } = useGetCourtsQuery();
 
-  const fetchCourts = async () => {
-    try {
-      const res = await axiosInstance.get("courts/");
-      setCourts(res.data);
-    } catch (err) {
-      console.error(err);
-      setError("فشل في تحميل المحاكم");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // لو الـ API بيرجع object فيه results
+  const courts = Array.isArray(data)
+    ? data
+    : data?.results || [];
 
   const handleSelectCourt = (court) => {
     if (court.divisions && court.divisions.length > 0) {
       setShowDivisions(court);
     } else {
-      // تمرير اسم المحكمة فقط إذا مفيش أقسام
       navigate(`/add-case/${court.id}/${court.name}`);
     }
   };
 
   const handleSelectDivision = (division, courtId, courtName) => {
-    // نمرر اسم المحكمة + اسم القسم للفورم
     navigate(`/add-case/${courtId}/${courtName}?divisionName=${division.name}`);
     setShowDivisions(null);
   };
 
-  if (loading) return <div className="loading">جاري التحميل...</div>;
+  if (isLoading) return <div className="loading">جاري التحميل...</div>;
 
   return (
     <div className="courts-page">
       <h2>اختر المحكمة</h2>
-      {error && <div className="alert alert-danger">{error}</div>}
+
+      {error && <div className="alert alert-danger">فشل في تحميل المحاكم</div>}
 
       <div className="courts-grid">
         {courts.map((court) => (
@@ -63,7 +53,6 @@ export default function SelectCourt() {
             <h3>{court.name}</h3>
 
             <div className="badge-container">
-              {/* عرض فقط إذا المحكمة لها أقسام */}
               {court.divisions && court.divisions.length > 0 && (
                 <span className="badge divisions-badge">
                   <FiLayers /> {court.divisions.length} قسم
@@ -83,6 +72,7 @@ export default function SelectCourt() {
         <div className="divisions-popup">
           <div className="popup-content">
             <h3>اختر القسم في {showDivisions.name}</h3>
+
             <div className="divisions-grid">
               {showDivisions.divisions.map((div) => (
                 <div
@@ -97,6 +87,7 @@ export default function SelectCourt() {
                 </div>
               ))}
             </div>
+
             <button
               className="btn btn-secondary close-popup"
               onClick={() => setShowDivisions(null)}
