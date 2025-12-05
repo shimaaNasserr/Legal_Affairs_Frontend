@@ -113,6 +113,33 @@
   flex-wrap: wrap;
   padding-top: 1rem;
   border-top: 2px solid var(--bg-tertiary);
+  justify-content: flex-end;
+}
+
+/* Button styles for consistent widths */
+.btn {
+  min-width: 80px;
+  text-align: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Add button specific styles */
+.add-btn {
+  min-width: 140px;
+  padding: 0.7rem 1.5rem;
+}
+
+/* Small buttons in cards */
+.btn-sm {
+  min-width: 70px;
+  padding: 0.5rem 0.75rem;
+}
+
+/* Make sure all buttons in card actions have the same width */
+.case-card-actions .btn {
+  flex: 0 0 auto;
+  width: auto;
 }
 
 /* Responsive */

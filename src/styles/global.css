@@ -15,7 +15,11 @@
   font-size: 1.875rem;
   font-weight: 700;
   color: var(--text-primary);
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--secondary-color) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -37,10 +41,11 @@
   text-decoration: none;
   position: relative;
   overflow: hidden;
+  width: min-content;
 }
 
 .btn::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -58,7 +63,11 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--primary-dark) 100%
+  );
   color: var(--text-inverse);
   box-shadow: var(--shadow-md);
 }
@@ -288,7 +297,7 @@ textarea::placeholder {
 }
 
 .loading::before {
-  content: '';
+  content: "";
   width: 2rem;
   height: 2rem;
   border: 3px solid var(--bg-tertiary);
@@ -377,7 +386,11 @@ textarea::placeholder {
 }
 
 .table thead {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--primary-dark) 100%
+  );
   color: var(--text-inverse);
 }
 
@@ -488,28 +501,26 @@ textarea::placeholder {
     align-items: flex-start;
     gap: 1rem;
   }
-  
+
   .page-header h2 {
     font-size: 1.5rem;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .filters {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .filter-select {
     width: 100%;
   }
-  
+
   .modal-content {
     padding: 1.5rem;
     max-width: 100%;
   }
 }
-
-

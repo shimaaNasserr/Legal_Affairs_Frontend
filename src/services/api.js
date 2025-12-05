@@ -1,7 +1,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import axiosInstance from "../apis/axiosInstance";
 
-// Custom base query using axios instance for authentication
+// Custom base query
 const baseQuery = async (args, api, extraOptions) => {
   try {
     const result = await axiosInstance({
@@ -21,35 +21,43 @@ const baseQuery = async (args, api, extraOptions) => {
   }
 };
 
-// Create API service with caching
 export const api = createApi({
   reducerPath: "api",
   baseQuery: baseQuery,
-  tagTypes: ["Investigations", "Appeals", "Cases", "Contracts", "Courts", "Departments", "Fatwas", "Users", "Reports"],
+  tagTypes: [
+    "Investigations",
+    "Appeals",
+    "Cases",
+    "Contracts",
+    "Courts",
+    "Departments",
+    "Fatwas",
+    "Users",
+    "Reports",
+  ],
   endpoints: (builder) => ({
-    // Investigations endpoints
+    // -----------------------------------------
+    // Investigations
+    // -----------------------------------------
     getInvestigations: builder.query({
       query: (params = {}) => {
         const cleaned = Object.fromEntries(
-          Object.entries(params || {}).filter(
+          Object.entries(params).filter(
             ([_, v]) => v !== undefined && v !== null && String(v).trim() !== ""
           )
         );
-        return {
-          url: "investigations/",
-          params: cleaned,
-        };
+        return { url: "investigations/", params: cleaned };
       },
       providesTags: ["Investigations"],
-      // Cache for 5 minutes
       keepUnusedDataFor: 300,
     }),
+
     getInvestigationById: builder.query({
       query: (id) => `investigations/${id}/`,
       providesTags: (result, error, id) => [{ type: "Investigations", id }],
-      // Cache for 5 minutes
       keepUnusedDataFor: 300,
     }),
+
     createInvestigation: builder.mutation({
       query: (formData) => ({
         url: "investigations/",
@@ -59,6 +67,7 @@ export const api = createApi({
       }),
       invalidatesTags: ["Investigations"],
     }),
+
     updateInvestigation: builder.mutation({
       query: ({ id, formData }) => ({
         url: `investigations/${id}/`,
@@ -71,6 +80,7 @@ export const api = createApi({
         { type: "Investigations", id },
       ],
     }),
+
     deleteInvestigation: builder.mutation({
       query: (id) => ({
         url: `investigations/${id}/`,
@@ -79,29 +89,28 @@ export const api = createApi({
       invalidatesTags: ["Investigations"],
     }),
 
-    // Appeals endpoints
+    // -----------------------------------------
+    // Appeals
+    // -----------------------------------------
     getAppeals: builder.query({
       query: (params = {}) => {
         const cleaned = Object.fromEntries(
-          Object.entries(params || {}).filter(
+          Object.entries(params).filter(
             ([_, v]) => v !== undefined && v !== null && String(v).trim() !== ""
           )
         );
-        return {
-          url: "appeals/",
-          params: cleaned,
-        };
+        return { url: "appeals/", params: cleaned };
       },
       providesTags: ["Appeals"],
-      // Cache for 5 minutes
       keepUnusedDataFor: 300,
     }),
+
     getAppealById: builder.query({
       query: (id) => `appeals/${id}/`,
       providesTags: (result, error, id) => [{ type: "Appeals", id }],
-      // Cache for 5 minutes
       keepUnusedDataFor: 300,
     }),
+
     createAppeal: builder.mutation({
       query: (formData) => ({
         url: "appeals/",
@@ -111,6 +120,7 @@ export const api = createApi({
       }),
       invalidatesTags: ["Appeals"],
     }),
+
     updateAppeal: builder.mutation({
       query: ({ id, formData }) => ({
         url: `appeals/${id}/`,
@@ -123,6 +133,7 @@ export const api = createApi({
         { type: "Appeals", id },
       ],
     }),
+
     deleteAppeal: builder.mutation({
       query: (id) => ({
         url: `appeals/${id}/`,
@@ -131,7 +142,9 @@ export const api = createApi({
       invalidatesTags: ["Appeals"],
     }),
 
-    // Cases endpoints
+    // -----------------------------------------
+    // Cases
+    // -----------------------------------------
     getCases: builder.query({
       query: (params = {}) => ({
         url: "cases/",
@@ -140,29 +153,34 @@ export const api = createApi({
       providesTags: ["Cases"],
       keepUnusedDataFor: 300,
     }),
+
     getCaseById: builder.query({
       query: (id) => `cases/${id}/`,
       providesTags: (result, error, id) => [{ type: "Cases", id }],
       keepUnusedDataFor: 300,
     }),
+
     addCase: builder.mutation({
       query: (formData) => ({
-        url: "/cases/",
+        url: "cases/",
         method: "POST",
         body: formData,
       }),
       invalidatesTags: ["Cases"],
     }),
+
     updateCase: builder.mutation({
       query: ({ id, formData }) => ({
-        url: `/cases/${id}/`,
+        url: `cases/${id}/`,
         method: "PUT",
         body: formData,
       }),
       invalidatesTags: ["Cases"],
     }),
 
-    // Contracts endpoints
+    // -----------------------------------------
+    // Contracts
+    // -----------------------------------------
     getContracts: builder.query({
       query: (params = {}) => ({
         url: "contracts/",
@@ -171,31 +189,34 @@ export const api = createApi({
       providesTags: ["Contracts"],
       keepUnusedDataFor: 300,
     }),
+
     getContractById: builder.query({
       query: (id) => `contracts/${id}/`,
       providesTags: (result, error, id) => [{ type: "Contracts", id }],
       keepUnusedDataFor: 300,
     }),
 
-    // Courts endpoints
+    // -----------------------------------------
+    // Courts
+    // -----------------------------------------
     getCourts: builder.query({
-      query: () => ({
-        url: "courts/",
-      }),
+      query: () => ({ url: "courts/" }),
       providesTags: ["Courts"],
       keepUnusedDataFor: 300,
     }),
 
-    // Departments endpoints
+    // -----------------------------------------
+    // Departments
+    // -----------------------------------------
     getDepartments: builder.query({
-      query: () => ({
-        url: "departments/",
-      }),
+      query: () => ({ url: "departments/" }),
       providesTags: ["Departments"],
       keepUnusedDataFor: 300,
     }),
 
-    // Fatwas endpoints
+    // -----------------------------------------
+    // Fatwas
+    // -----------------------------------------
     getFatwas: builder.query({
       query: (params = {}) => ({
         url: "fatwas/",
@@ -204,13 +225,16 @@ export const api = createApi({
       providesTags: ["Fatwas"],
       keepUnusedDataFor: 300,
     }),
+
     getFatwaById: builder.query({
       query: (id) => `fatwas/${id}/`,
       providesTags: (result, error, id) => [{ type: "Fatwas", id }],
       keepUnusedDataFor: 300,
     }),
 
-    // Users endpoints
+    // -----------------------------------------
+    // Users
+    // -----------------------------------------
     getUsers: builder.query({
       query: (params = {}) => ({
         url: "accounts/users/",
@@ -219,62 +243,108 @@ export const api = createApi({
       providesTags: ["Users"],
       keepUnusedDataFor: 300,
     }),
+    addUser: builder.mutation({
+      query: (formData) => ({
+        url: "accounts/users/",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Users"],
+    }),
+    updateUser: builder.mutation({
+      query: ({ id, formData }) => ({
+        url: `accounts/users/${id}/`,
+        method: "PUT",
+        body: formData,
+      }),
+      invalidatesTags: ["Users"],
+    }),
+
     getUserById: builder.query({
       query: (id) => `accounts/users/${id}/`,
       providesTags: (result, error, id) => [{ type: "Users", id }],
       keepUnusedDataFor: 300,
     }),
 
-    // Reports endpoints
+    deactivateUser: builder.mutation({
+      query: (id) => ({
+        url: `accounts/users/${id}/`,
+        method: "DELETE",
+        body: { is_active: false },
+      }),
+      invalidatesTags: ["Users"],
+    }),
+
+    reactivateUser: builder.mutation({
+      query: (id) => ({
+        url: `accounts/users/${id}/reactivate/`,
+        method: "POST",
+        body: { is_active: true },
+      }),
+      invalidatesTags: ["Users"],
+    }),
+
+    // -----------------------------------------
+    // Reports
+    // -----------------------------------------
     getReportsSummary: builder.query({
-      query: () => ({
-        url: "reports/summary/",
-      }),
+      query: () => ({ url: "reports/summary/" }),
       providesTags: ["Reports"],
       keepUnusedDataFor: 300,
     }),
+
     getReportsCasesByStatus: builder.query({
-      query: () => ({
-        url: "reports/cases_by_status/",
-      }),
+      query: () => ({ url: "reports/cases_by_status/" }),
       providesTags: ["Reports"],
       keepUnusedDataFor: 300,
     }),
+
     getReportsContractsByType: builder.query({
-      query: () => ({
-        url: "reports/contracts_by_type/",
-      }),
+      query: () => ({ url: "reports/contracts_by_type/" }),
       providesTags: ["Reports"],
       keepUnusedDataFor: 300,
     }),
   }),
 });
 
-// Export hooks for usage in functional components
+// Export hooks
 export const {
   useGetInvestigationsQuery,
   useGetInvestigationByIdQuery,
   useCreateInvestigationMutation,
   useUpdateInvestigationMutation,
   useDeleteInvestigationMutation,
+
   useGetAppealsQuery,
   useGetAppealByIdQuery,
   useCreateAppealMutation,
   useUpdateAppealMutation,
   useDeleteAppealMutation,
+
   useGetCasesQuery,
   useGetCaseByIdQuery,
-  useaddCase,
-  useaupdateCase,
+  useAddCaseMutation,
+  useUpdateCaseMutation,
+
   useGetContractsQuery,
   useGetContractByIdQuery,
+
   useGetCourtsQuery,
   useGetDepartmentsQuery,
+
   useGetFatwasQuery,
   useGetFatwaByIdQuery,
+
   useGetUsersQuery,
+  useAddUserMutation,
   useGetUserByIdQuery,
+  useUpdateUserMutation,
+  useDeactivateUserMutation,
+  useReactivateUserMutation,
+
   useGetReportsSummaryQuery,
   useGetReportsCasesByStatusQuery,
   useGetReportsContractsByTypeQuery,
 } = api;
+
+export default api;
