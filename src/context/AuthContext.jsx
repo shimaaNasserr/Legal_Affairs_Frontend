@@ -5,7 +5,7 @@ export const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
-  const [loading, setLoading] = useState(true); // 👈 مهم جداً
+  const [loading, setLoading] = useState(true); 
 
   useEffect(() => {
     const storedToken = localStorage.getItem("access");
@@ -15,8 +15,8 @@ export function AuthProvider({ children }) {
       setAccessToken(storedToken);
       setUser(JSON.parse(storedUser));
     }
-
-    setLoading(false); // 👈 خلّيه يعلن إن التحميل خلص
+ 
+    setLoading(false);   
   }, []);
 
   const login = (token, userData) => {

@@ -1,5 +1,5 @@
 import { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
 import "./Login.css";
@@ -11,6 +11,11 @@ export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -25,7 +30,7 @@ export default function Login() {
       const res = await axiosInstance.post("accounts/login/", formData);
       login(res.data.access, res.data.user);
       navigate("/");
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      localStorage.setItem("user", JSON.stringify(res.data.user));
 
     } catch (err) {
       console.error(err);
@@ -88,23 +93,54 @@ export default function Login() {
               <label>
                 كلمة المرور <span className="required">*</span>
               </label>
-              <div className="input-wrapper">
+              <div className="form-group" style={{ position: 'relative' }}>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   name="password"
                   className="myform-control"
                   placeholder="أدخل كلمة المرور"
                   value={formData.password}
                   onChange={handleChange}
                   required
+                  style={{
+                    paddingRight: '40px',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
                 />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  style={{
+                    position: 'absolute',
+                    left: '15px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '5px',
+                    margin: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <i 
+                    className={`ri-eye${showPassword ? '-off' : ''}-line`}
+                    style={{
+                      color: '#6c757d',
+                      fontSize: '1.2rem',
+                      display: 'inline-block',
+                      lineHeight: 1
+                    }}
+                  ></i>
+                </button>
               </div>
             </div>
 
             <div className="forgot-password">
-              <a href="#" onClick={(e) => { e.preventDefault(); }}>
-                نسيت كلمة المرور؟
-              </a>
+              <Link to="/forgot-password">نسيت كلمة المرور؟</Link>
             </div>
 
             <button type="submit" className="login-btn" disabled={loading}>

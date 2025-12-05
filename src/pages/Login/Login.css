@@ -255,6 +255,27 @@
   color: var(--text-tertiary);
 }
 
+/* Password toggle button styles */
+.form-group button[type="button"] {
+  outline: none;
+}
+
+.form-group button[type="button"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.form-group button[type="button"]:hover i {
+  color: #0056b3;
+}
+
+/* Ensure the input has proper spacing */
+.myform-control[type="password"],
+.myform-control[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .password-toggle {
   position: absolute;
   left: 1rem;

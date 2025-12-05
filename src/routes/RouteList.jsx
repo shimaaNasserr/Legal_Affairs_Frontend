@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
 import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
+import ForgotPassword from "../pages/ForgotPassword/ForgotPassword";
 import { Home } from "../pages/Home/Home";
 import Cases from "../pages/Cases/Cases";
 import SelectCourt from "../pages/Courts/SelectCourt";
@@ -16,6 +17,7 @@ import Users from "../pages/Users/Users";
 import Profile from "../pages/Profile/Profile";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { ROLES } from "../utils/roles";
+import ResetPassword from "../pages/Login/resetPass";
 
 const route = createBrowserRouter([
   {
@@ -25,6 +27,14 @@ const route = createBrowserRouter([
   {
     path: "/register",
     element: <Register />,
+  },
+  {
+    path: "/forgot-password",
+    element: <ForgotPassword />,
+  },
+   {
+    path: "/reset-password/:token",
+    element: <ResetPassword />,
   },
   {
     path: "/",
