@@ -134,6 +134,79 @@
   font-size: 1.125rem;
 }
 
+.investigations-page {
+  padding: 0;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.investigations-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Loading overlay styles */
+.form-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* Higher z-index to cover everything */
+  border-radius: var(--radius-xl);
+}
+
+.form-loading-overlay .loading-spinner {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2xl);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  max-width: 300px;
+  width: 90%;
+}
+
+.form-loading-overlay .loading-spinner i {
+  font-size: 3rem;
+  color: var(--primary-color);
+  animation: spin 1.2s ease-in-out infinite;
+  display: block;
+  margin-bottom: 1.5rem;
+}
+
+.form-loading-overlay .loading-spinner p {
+  margin: 0.5rem 0 0;
+  font-size: 1.125rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.form-loading-overlay .loading-spinner small {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: normal;
+}
+
+.investigation-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
 .file-link {
   color: var(--info);
   text-decoration: none;
@@ -216,6 +289,15 @@
   background-color: var(--bg-tertiary);
 }
 
+.large-modal {
+  max-width: 900px;
+  position: relative;
+  overflow: hidden; /* Prevent any weird overflow during loading */
+}
+.modal-content {
+  position: relative;
+}
+
 .investigation-form button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
@@ -233,5 +315,34 @@
 
   .large-modal {
     max-width: 100%;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .investigations-list {
+    grid-template-columns: 1fr;
+  }
+
+  .investigation-card {
+    padding: 1.5rem;
+  }
+
+  .large-modal {
+    max-width: 100%;
+    margin: 1rem;
+  }
+
+  .form-loading-overlay {
+    border-radius: 12px;
+  }
+
+  .form-loading-overlay .loading-spinner {
+    padding: 2rem;
+    margin: 1rem;
+  }
+
+  .form-loading-overlay .loading-spinner i {
+    font-size: 2.5rem;
   }
 }

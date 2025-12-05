@@ -16,8 +16,10 @@ const Investigations = () => {
   const [departments, setDepartments] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingInvestigation, setEditingInvestigation] = useState(null);
+  const [isLoadingEditData, setIsLoadingEditData] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentEditId, setCurrentEditId] = useState(null);
   const [pageSize] = useState(5);
 
   // Reset to page 1 when search term changes
@@ -162,11 +164,15 @@ const Investigations = () => {
   const endIndex = startIndex + pageSize;
   const investigations = filteredInvestigations.slice(startIndex, endIndex);
 
-  // Fetch full investigation details when editing
-  const { data: fullInvestigationData, isLoading: loadingFullData } =
-    useGetInvestigationByIdQuery(editingInvestigation?.id, {
-      skip: !editingInvestigation?.id, // Skip if not editing
-    });
+  // Update the useGetInvestigationByIdQuery to track loading state
+  const {
+    data: fullInvestigationData,
+    isLoading: loadingFullData,
+    isFetching: fetchingFullData,
+    refetch: refetchInvestigation, // Get the refetch function
+  } = useGetInvestigationByIdQuery(editingInvestigation?.id, {
+    skip: !editingInvestigation?.id,
+  });
 
   const [createInvestigation, { isLoading: isCreating }] =
     useCreateInvestigationMutation();
@@ -174,8 +180,26 @@ const Investigations = () => {
     useUpdateInvestigationMutation();
   const [deleteInvestigation] = useDeleteInvestigationMutation();
 
-  // Combined loading state for form operations
-  const isFormLoading = loadingFullData || isCreating || isUpdating;
+  useEffect(() => {
+    if (editingInvestigation?.id && editingInvestigation.id !== currentEditId) {
+      console.log(
+        "Refetching data for new investigation:",
+        editingInvestigation.id
+      );
+      refetchInvestigation(); // Force refetch
+    }
+  }, [editingInvestigation, currentEditId, refetchInvestigation]);
+
+  // Combine all loading states
+  const isFormLoading = isLoadingEditData || isCreating || isUpdating;
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingInvestigation(null);
+    setCurrentEditId(null); // Reset the ID
+    setIsLoadingEditData(false);
+    resetForm();
+  };
 
   // Helper function to format date for HTML date input (YYYY-MM-DD)
   const formatDateForInput = (dateString) => {
@@ -263,8 +287,18 @@ const Investigations = () => {
 
   // Effect to populate form when full investigation data is loaded
   useEffect(() => {
-    if (fullInvestigationData && editingInvestigation) {
-      const investigation = fullInvestigationData; // Use full data from API
+    // Only populate form if we have fresh data AND it matches the current edit ID
+    if (
+      fullInvestigationData &&
+      editingInvestigation &&
+      fullInvestigationData.id === currentEditId
+    ) {
+      console.log(
+        "Populating form for investigation:",
+        fullInvestigationData.id
+      );
+
+      const investigation = fullInvestigationData;
 
       // Parse accused_names_list if available, otherwise use accused_names
       let accusedNames = [];
@@ -319,19 +353,15 @@ const Investigations = () => {
         file: null,
       };
 
-      console.log("Editing investigation - Full API data:", {
-        description: investigation.description,
-        accused_names_list: investigation.accused_names_list,
-        accused_names: investigation.accused_names,
-      });
-      console.log("Editing investigation - Parsed form data:", {
-        description: newFormData.description,
-        accused_names_input: newFormData.accused_names_input,
-      });
+      console.log("Setting form data for investigation ID:", investigation.id);
 
-      setFormData(newFormData);
+      // Use a timeout to ensure state updates properly
+      setTimeout(() => {
+        setFormData(newFormData);
+        setIsLoadingEditData(false);
+      }, 0);
     }
-  }, [fullInvestigationData, editingInvestigation]);
+  }, [fullInvestigationData, editingInvestigation, currentEditId]);
 
   const fetchDepartments = async () => {
     try {
@@ -400,8 +430,12 @@ const Investigations = () => {
 
   const handleEdit = (investigation) => {
     setEditingInvestigation(investigation);
+    setCurrentEditId(investigation.id); // Track the ID
     setShowModal(true);
-    // Form will be populated by useEffect when fullInvestigationData loads
+
+    // Reset form immediately to clear previous data
+    resetForm();
+    setIsLoadingEditData(true);
   };
 
   const handleDelete = async (investigationId) => {
@@ -629,7 +663,10 @@ const Investigations = () => {
       )}
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div
+          className="modal-overlay"
+          onClick={() => !isFormLoading && closeModal()}
+        >
           <div
             className="modal-content large-modal"
             onClick={(e) => e.stopPropagation()}
@@ -646,305 +683,325 @@ const Investigations = () => {
                 ×
               </button>
             </div>
-            {loadingFullData && (
+            {isLoadingEditData && (
               <div className="form-loading-overlay">
                 <div className="loading-spinner">
                   <i className="ri-loader-4-line"></i>
-                  <p>جاري تحميل البيانات...</p>
+                  <p>جاري تحميل بيانات التحقيق...</p>
+                  <small>يرجى الانتظار</small>
                 </div>
               </div>
             )}
-            <form onSubmit={handleSubmit} className="investigation-form">
-              <div className="form-group">
-                <label>عنوان التحقيق *</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  required
-                  disabled={isFormLoading}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>وصف التحقيق *</label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  rows="4"
-                  required
-                  disabled={isFormLoading}
-                ></textarea>
-              </div>
-
-              <div className="form-row">
+            <div
+              className={`form-container ${
+                isLoadingEditData ? "form-loading" : ""
+              }`}
+            >
+              <form
+                onSubmit={handleSubmit}
+                className={`investigation-form ${
+                  isLoadingEditData ? "loading" : ""
+                }`}
+              >
                 <div className="form-group">
-                  <label>تاريخ الاستلام *</label>
-                  <input
-                    type="date"
-                    name="date_received"
-                    value={formData.date_received}
-                    onChange={handleChange}
-                    required
-                    disabled={isFormLoading}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>الحالة *</label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    required
-                    disabled={isFormLoading}
-                  >
-                    <option value="pending">قيد الانتظار</option>
-                    <option value="under_investigation">قيد التحقيق</option>
-                    <option value="completed">مكتمل</option>
-                    <option value="closed">مغلق</option>
-                    <option value="appealed">قيد الاستئناف</option>
-                    <option value="referred_to_court">محال للقضاء</option>
-                    <option value="settled">تم التسوية</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>الأولوية *</label>
-                  <select
-                    name="priority"
-                    value={formData.priority}
-                    onChange={handleChange}
-                    required
-                    disabled={isFormLoading}
-                  >
-                    <option value="low">منخفضة</option>
-                    <option value="medium">متوسطة</option>
-                    <option value="high">عالية</option>
-                    <option value="urgent">عاجلة</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>نوع القضية *</label>
-                  <select
-                    name="case_type"
-                    value={formData.case_type}
-                    onChange={handleChange}
-                    required
-                    disabled={isFormLoading}
-                  >
-                    <option value="against_university">ضد الجامعة</option>
-                    <option value="by_university">مرفوعة من الجامعة</option>
-                    <option value="internal_disciplinary">
-                      تأديبية داخلية
-                    </option>
-                    <option value="academic_misconduct">مخالفة أكاديمية</option>
-                    <option value="administrative">إدارية</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>أسماء المتهمين (مفصولة بفواصل)</label>
-                <input
-                  type="text"
-                  name="accused_names_input"
-                  value={formData.accused_names_input}
-                  onChange={handleChange}
-                  placeholder="اسم1, اسم2, اسم3"
-                  disabled={isFormLoading}
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>نوع المشتكي</label>
-                  <select
-                    name="complainant_type"
-                    value={formData.complainant_type}
-                    onChange={handleChange}
-                    disabled={isFormLoading}
-                  >
-                    <option value="">اختر النوع</option>
-                    <option value="student">طالب</option>
-                    <option value="faculty_member">عضو هيئة تدريس</option>
-                    <option value="employee">موظف</option>
-                    <option value="external_party">طرف خارجي</option>
-                    <option value="university">الجامعة</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>اسم المشتكي</label>
+                  <label>عنوان التحقيق *</label>
                   <input
                     type="text"
-                    name="complainant_name"
-                    value={formData.complainant_name}
+                    name="title"
+                    value={formData.title}
                     onChange={handleChange}
+                    required
                     disabled={isFormLoading}
+                    className={isLoadingEditData ? "field-loading" : ""}
                   />
                 </div>
-              </div>
 
-              <div className="form-row">
                 <div className="form-group">
-                  <label>رقم هوية المشتكي</label>
+                  <label>وصف التحقيق *</label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows="4"
+                    required
+                    className={isLoadingEditData ? "field-loading" : ""}
+                    disabled={isFormLoading}
+                  ></textarea>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>تاريخ الاستلام *</label>
+                    <input
+                      type="date"
+                      name="date_received"
+                      value={formData.date_received}
+                      onChange={handleChange}
+                      required
+                      className={isLoadingEditData ? "field-loading" : ""}
+                      disabled={isFormLoading}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>الحالة *</label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      required
+                      className={isLoadingEditData ? "field-loading" : ""}
+                      disabled={isFormLoading}
+                    >
+                      <option value="pending">قيد الانتظار</option>
+                      <option value="under_investigation">قيد التحقيق</option>
+                      <option value="completed">مكتمل</option>
+                      <option value="closed">مغلق</option>
+                      <option value="appealed">قيد الاستئناف</option>
+                      <option value="referred_to_court">محال للقضاء</option>
+                      <option value="settled">تم التسوية</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>الأولوية *</label>
+                    <select
+                      name="priority"
+                      value={formData.priority}
+                      onChange={handleChange}
+                      required
+                      className={isLoadingEditData ? "field-loading" : ""}
+                      disabled={isFormLoading}
+                    >
+                      <option value="low">منخفضة</option>
+                      <option value="medium">متوسطة</option>
+                      <option value="high">عالية</option>
+                      <option value="urgent">عاجلة</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>نوع القضية *</label>
+                    <select
+                      name="case_type"
+                      value={formData.case_type}
+                      onChange={handleChange}
+                      required
+                      className={isLoadingEditData ? "field-loading" : ""}
+                      disabled={isFormLoading}
+                    >
+                      <option value="against_university">ضد الجامعة</option>
+                      <option value="by_university">مرفوعة من الجامعة</option>
+                      <option value="internal_disciplinary">
+                        تأديبية داخلية
+                      </option>
+                      <option value="academic_misconduct">
+                        مخالفة أكاديمية
+                      </option>
+                      <option value="administrative">إدارية</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>أسماء المتهمين (مفصولة بفواصل)</label>
                   <input
                     type="text"
-                    name="complainant_id"
-                    value={formData.complainant_id}
+                    name="accused_names_input"
+                    value={formData.accused_names_input}
                     onChange={handleChange}
+                    placeholder="اسم1, اسم2, اسم3"
                     disabled={isFormLoading}
                   />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>نوع المشتكي</label>
+                    <select
+                      name="complainant_type"
+                      value={formData.complainant_type}
+                      onChange={handleChange}
+                      disabled={isFormLoading}
+                    >
+                      <option value="">اختر النوع</option>
+                      <option value="student">طالب</option>
+                      <option value="faculty_member">عضو هيئة تدريس</option>
+                      <option value="employee">موظف</option>
+                      <option value="external_party">طرف خارجي</option>
+                      <option value="university">الجامعة</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>اسم المشتكي</label>
+                    <input
+                      type="text"
+                      name="complainant_name"
+                      value={formData.complainant_name}
+                      onChange={handleChange}
+                      disabled={isFormLoading}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>رقم هوية المشتكي</label>
+                    <input
+                      type="text"
+                      name="complainant_id"
+                      value={formData.complainant_id}
+                      onChange={handleChange}
+                      disabled={isFormLoading}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>الكلية المعنية</label>
+                    <input
+                      type="text"
+                      name="faculty_college"
+                      value={formData.faculty_college}
+                      onChange={handleChange}
+                      disabled={isFormLoading}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>تاريخ بداية التحقيق</label>
+                    <input
+                      type="date"
+                      name="date_started"
+                      value={formData.date_started}
+                      onChange={handleChange}
+                      disabled={isFormLoading}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>تاريخ انتهاء التحقيق</label>
+                    <input
+                      type="date"
+                      name="date_completed"
+                      value={formData.date_completed}
+                      onChange={handleChange}
+                      disabled={isFormLoading}
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
-                  <label>الكلية المعنية</label>
-                  <input
-                    type="text"
-                    name="faculty_college"
-                    value={formData.faculty_college}
+                  <label>ملاحظات</label>
+                  <textarea
+                    name="notes"
+                    value={formData.notes}
                     onChange={handleChange}
+                    rows="3"
                     disabled={isFormLoading}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>تاريخ بداية التحقيق</label>
-                  <input
-                    type="date"
-                    name="date_started"
-                    value={formData.date_started}
-                    onChange={handleChange}
-                    disabled={isFormLoading}
-                  />
+                  ></textarea>
                 </div>
 
                 <div className="form-group">
-                  <label>تاريخ انتهاء التحقيق</label>
+                  <label>النتائج</label>
+                  <textarea
+                    name="findings"
+                    value={formData.findings}
+                    onChange={handleChange}
+                    rows="3"
+                    disabled={isFormLoading}
+                  ></textarea>
+                </div>
+
+                <div className="form-group">
+                  <label>التوصيات</label>
+                  <textarea
+                    name="recommendations"
+                    value={formData.recommendations}
+                    onChange={handleChange}
+                    rows="3"
+                    disabled={isFormLoading}
+                  ></textarea>
+                </div>
+
+                <div className="form-group">
+                  <label>الإدارة</label>
+                  <select
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    disabled={isFormLoading}
+                  >
+                    <option value="">اختر الإدارة</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>رفع ملف التحقيق (PDF)</label>
                   <input
-                    type="date"
-                    name="date_completed"
-                    value={formData.date_completed}
+                    type="file"
+                    name="file"
+                    accept=".pdf"
                     onChange={handleChange}
                     disabled={isFormLoading}
                   />
                 </div>
-              </div>
 
-              <div className="form-group">
-                <label>ملاحظات</label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  rows="3"
-                  disabled={isFormLoading}
-                ></textarea>
-              </div>
+                {error && (
+                  <div className="alert alert-danger">
+                    {Array.isArray(error) ? (
+                      <ul className="mb-0">
+                        {error.map((msg, idx) => (
+                          <li key={idx}>{msg}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      error
+                    )}
+                  </div>
+                )}
 
-              <div className="form-group">
-                <label>النتائج</label>
-                <textarea
-                  name="findings"
-                  value={formData.findings}
-                  onChange={handleChange}
-                  rows="3"
-                  disabled={isFormLoading}
-                ></textarea>
-              </div>
-
-              <div className="form-group">
-                <label>التوصيات</label>
-                <textarea
-                  name="recommendations"
-                  value={formData.recommendations}
-                  onChange={handleChange}
-                  rows="3"
-                  disabled={isFormLoading}
-                ></textarea>
-              </div>
-
-              <div className="form-group">
-                <label>الإدارة</label>
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  disabled={isFormLoading}
-                >
-                  <option value="">اختر الإدارة</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>رفع ملف التحقيق (PDF)</label>
-                <input
-                  type="file"
-                  name="file"
-                  accept=".pdf"
-                  onChange={handleChange}
-                  disabled={isFormLoading}
-                />
-              </div>
-
-              {error && (
-                <div className="alert alert-danger">
-                  {Array.isArray(error) ? (
-                    <ul className="mb-0">
-                      {error.map((msg, idx) => (
-                        <li key={idx}>{msg}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    error
-                  )}
+                <div className="modal-actions">
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={isFormLoading}
+                  >
+                    {isLoadingEditData ? (
+                      <>
+                        <i className="ri-loader-4-line"></i>{" "}
+                        {isCreating || isUpdating
+                          ? editingInvestigation
+                            ? "جاري التحديث..."
+                            : "جاري الإضافة..."
+                          : "جاري التحميل..."}
+                      </>
+                    ) : editingInvestigation ? (
+                      "تحديث"
+                    ) : (
+                      "إضافة"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={closeModal}
+                    disabled={isFormLoading}
+                  >
+                    إلغاء
+                  </button>
                 </div>
-              )}
-
-              <div className="modal-actions">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={isFormLoading}
-                >
-                  {isFormLoading ? (
-                    <>
-                      <i className="ri-loader-4-line"></i>{" "}
-                      {isCreating || isUpdating
-                        ? editingInvestigation
-                          ? "جاري التحديث..."
-                          : "جاري الإضافة..."
-                        : "جاري التحميل..."}
-                    </>
-                  ) : editingInvestigation ? (
-                    "تحديث"
-                  ) : (
-                    "إضافة"
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowModal(false)}
-                  disabled={isFormLoading}
-                >
-                  إلغاء
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}
