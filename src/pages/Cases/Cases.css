@@ -1008,7 +1008,7 @@ select.input-error {
 
 /* View – Blue */
 .btn-view {
-  background: #4a90e2 !important;
+  background: #1b518f !important;
   color: #fff !important;
   border: none;
   transition: 0.3s;
@@ -1018,17 +1018,18 @@ select.input-error {
   background: #357abd !important;
 }
 
-/* Edit – Gold */
+/* Edit – Teal */
 .btn-edit {
-  background: #ffdd57 !important;
-  color: #000 !important;
+  background: #428b83 !important; /* teal */
+  color: #ffffff !important;
   border: none;
   transition: 0.3s;
 }
 
 .btn-edit:hover {
-  background: #f6c944 !important;
+  background: #0f9f91 !important;
 }
+
 
 /* Delete – Soft Red */
 .btn-delete {
@@ -1121,11 +1122,11 @@ select.input-error {
 }
 
 .hearing-tag {
-  background-color: #e0f3ff;
+  background-color: #1b70a5;
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 14px;
-  color: #0077cc;
+  color: #eaeff1;
 }
 
 .back-btn {

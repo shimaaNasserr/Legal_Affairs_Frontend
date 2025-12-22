@@ -17,10 +17,6 @@ export default function CaseDetails() {
 
   if (!caseItem) return <p>جاري التحميل...</p>;
 
-  const courtDisplay = caseItem.division_name
-    ? `${caseItem.court_name} - ${caseItem.division_name}`
-    : caseItem.court_name;
-
   return (
     <div className="case-details-page">
       <h2 className="page-title">تفاصيل القضية</h2>
@@ -44,7 +40,7 @@ export default function CaseDetails() {
           </div>
 
           <div className="detail-item">
-            <strong>المحكمة:</strong> {courtDisplay || "-"}
+            <strong>المحكمة:</strong> {caseItem.court_full_name || "-"}
           </div>
 
           <div className="detail-item">

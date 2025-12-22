@@ -12,8 +12,8 @@ const CASE_STATUS_CHOICES = [
 ];
 
 const RULING_CHOICES = [
-  { value: "for_university", label: "لصالح الجامعة" },
-  { value: "against_university", label: "ضد الجامعة" },
+  { value: "لصالح الجامعة", label: "لصالح الجامعة" },
+  { value: "ضد الجامعة", label: "ضد الجامعة" },
 ];
 
 export default function AddCaseForm({ refetchCases }) {
@@ -143,7 +143,7 @@ export default function AddCaseForm({ refetchCases }) {
       if (isEdit) await axiosInstance.patch(`/cases/${editId}/`, formToSend);
       else await axiosInstance.post(`/cases/`, formToSend);
 
-      if (refetchCases) await refetchCases();
+      localStorage.removeItem("cases_cache");
       navigate("/cases");
     } catch (err) {
       const backendErrors = [];
