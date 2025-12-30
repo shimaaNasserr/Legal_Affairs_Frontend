@@ -1,19 +1,24 @@
 import React, { useState, useContext, useMemo, useEffect } from "react";
-import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
-import { useGetContractsQuery, useGetDepartmentsQuery } from "../../services/api";
+import {
+  useGetContractsQuery,
+  useGetDepartmentsQuery,
+  useCreateContractMutation,
+  useUpdateContractMutation,
+  useDeleteContractMutation
+} from "../../services/api";
 import { useLocation } from "react-router-dom";
 import "./Contracts.css";
 
 const Contracts = () => {
   const { user } = useContext(AuthContext);
   const [showModal, setShowModal] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1); // 1: Basic info, 2: Content/Progress, 3: Dates/Extras
+  const [currentStep, setCurrentStep] = useState(1);
   const [editingContract, setEditingContract] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [expiryFilter, setExpiryFilter] = useState("all"); // all | expired | expiring
-  const [sortBySoonest, setSortBySoonest] = useState(false); // sort by nearest end date even in All view
+  const [expiryFilter, setExpiryFilter] = useState("all");
+  const [sortBySoonest, setSortBySoonest] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [formData, setFormData] = useState({
@@ -31,7 +36,6 @@ const Contracts = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Use cached queries - data is automatically cached and reused
   const queryParams = useMemo(() => ({
     page,
     page_size: pageSize,
@@ -40,14 +44,18 @@ const Contracts = () => {
 
   const { data: contractsData, isLoading: loading, error: contractsError } = useGetContractsQuery(queryParams);
   const { data: departments = [] } = useGetDepartmentsQuery();
+
+  const [createContract] = useCreateContractMutation();
+  const [updateContract] = useUpdateContractMutation();
+  const [deleteContract] = useDeleteContractMutation();
+
   const location = useLocation();
 
-  // Fetch lightweight counts for badges
   const { data: expiredCountResp } = useGetContractsQuery({ expiry: "expired", page: 1, page_size: 1 });
   const { data: expiringCountResp } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 1 });
   const expiredCount = typeof expiredCountResp === "object" ? (expiredCountResp?.count ?? 0) : 0;
   const expiringCount = typeof expiringCountResp === "object" ? (expiringCountResp?.count ?? 0) : 0;
-  
+
   const contracts = contractsData?.results || contractsData || [];
   const totalCount = typeof contractsData === "object" && contractsData ? contractsData.count ?? contracts.length : contracts.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -59,7 +67,6 @@ const Contracts = () => {
     } else {
       setFormData({ ...formData, [name]: value });
     }
-    // Clear field error on edit
     if (fieldErrors?.[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
     }
@@ -70,22 +77,12 @@ const Contracts = () => {
     setError("");
     setFieldErrors({});
 
-    // Validate all required fields across steps before submit
     const validStep1 = validateStep(1);
     const validStep2 = validateStep(2);
     const validStep3 = validateStep(3);
-    if (!validStep1) {
-      setCurrentStep(1);
-      return;
-    }
-    if (!validStep2) {
-      setCurrentStep(2);
-      return;
-    }
-    if (!validStep3) {
-      setCurrentStep(3);
-      return;
-    }
+    if (!validStep1) { setCurrentStep(1); return; }
+    if (!validStep2) { setCurrentStep(2); return; }
+    if (!validStep3) { setCurrentStep(3); return; }
 
     try {
       setSubmitting(true);
@@ -101,28 +98,20 @@ const Contracts = () => {
       });
 
       if (editingContract) {
-        await axiosInstance.patch(
-          `contracts/${editingContract.id}/`,
-          submitData,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
+        await updateContract({
+          id: editingContract.id,
+          formData: submitData,
+        }).unwrap();
       } else {
-        await axiosInstance.post("contracts/", submitData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await createContract(submitData).unwrap();
       }
       setShowModal(false);
       setEditingContract(null);
       resetForm();
-      // Cache will be invalidated by RTK Query if we add mutations
-      window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error saving contract:", err);
-      const data = err?.response?.data;
+      const data = err?.data;
       const apiDetail = data?.detail || data?.message;
-      // Map Django/DRF field errors to UI
       if (data && typeof data === "object" && !Array.isArray(data)) {
         const fe = {};
         Object.entries(data).forEach(([k, v]) => {
@@ -131,10 +120,8 @@ const Contracts = () => {
         });
         if (Object.keys(fe).length) setFieldErrors(fe);
       }
-      // General error fallback
       setError(apiDetail || "فشل في حفظ العقد");
-    }
-    finally {
+    } finally {
       setSubmitting(false);
     }
   };
@@ -160,9 +147,7 @@ const Contracts = () => {
     if (!window.confirm("هل أنت متأكد من حذف هذا العقد؟")) return;
 
     try {
-      await axiosInstance.delete(`contracts/${contractId}/`);
-      // Cache will be invalidated by RTK Query if we add mutations
-      window.location.reload(); // Temporary: reload to refresh cache
+      await deleteContract(contractId).unwrap();
     } catch (err) {
       console.error("Error deleting contract:", err);
       setError("فشل في حذف العقد");
@@ -254,7 +239,7 @@ const Contracts = () => {
           setExpiryFilter(saved);
         }
       }
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -268,7 +253,7 @@ const Contracts = () => {
         const v = JSON.parse(localStorage.getItem(`contracts_view_${uid}`) || '{}');
         v.expiryFilter = f;
         localStorage.setItem(`contracts_view_${uid}`, JSON.stringify(v));
-      } catch {}
+      } catch { }
     }
   }, [location?.state]);
 
@@ -281,7 +266,7 @@ const Contracts = () => {
       const v = JSON.parse(localStorage.getItem(`contracts_view_${uid}`) || '{}');
       v.expiryFilter = expiryFilter;
       localStorage.setItem(`contracts_view_${uid}`, JSON.stringify(v));
-    } catch {}
+    } catch { }
   }, [expiryFilter]);
 
   // Persist other view settings
@@ -295,7 +280,7 @@ const Contracts = () => {
       v.sortBySoonest = sortBySoonest;
       v.searchTerm = searchTerm;
       localStorage.setItem(`contracts_view_${uid}`, JSON.stringify(v));
-    } catch {}
+    } catch { }
   }, [typeFilter, pageSize, sortBySoonest, searchTerm]);
 
   const isExpired = (endDate) => {
@@ -342,14 +327,14 @@ const Contracts = () => {
       });
       // Sort if needed
       const rows = (expiryFilter !== 'all' || sortBySoonest)
-        ? [...filtered].sort((a,b) => {
-            const da = a.end_date ? new Date(a.end_date).getTime() : Number.MAX_SAFE_INTEGER;
-            const db = b.end_date ? new Date(b.end_date).getTime() : Number.MAX_SAFE_INTEGER;
-            return da - db;
-          })
+        ? [...filtered].sort((a, b) => {
+          const da = a.end_date ? new Date(a.end_date).getTime() : Number.MAX_SAFE_INTEGER;
+          const db = b.end_date ? new Date(b.end_date).getTime() : Number.MAX_SAFE_INTEGER;
+          return da - db;
+        })
         : filtered;
       const headers = [
-        'contract_number','general_number','contract_type','date_received','end_date','archive_date','department','content','progress'
+        'contract_number', 'general_number', 'contract_type', 'date_received', 'end_date', 'archive_date', 'department', 'content', 'progress'
       ];
       const escapeCsv = (v) => {
         if (v === null || v === undefined) return '';
@@ -371,7 +356,7 @@ const Contracts = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `contracts_export_${new Date().toISOString().slice(0,10)}.csv`;
+      a.download = `contracts_export_${new Date().toISOString().slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -421,23 +406,23 @@ const Contracts = () => {
         {(user?.role === "President" ||
           user?.role === "GeneralManager" ||
           user?.role === "DepartmentManager") && (
-          <div className="d-flex gap-2">
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                setEditingContract(null);
-                resetForm();
-                setCurrentStep(1);
-                setShowModal(true);
-              }}
-            >
-              <i className="ri-add-circle-line"></i> إضافة عقد جديد
-            </button>
-            <button className="btn btn-outline-secondary" onClick={exportCsv}>
-              <i className="ri-download-2-line"></i> تصدير CSV
-            </button>
-          </div>
-        )}
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setEditingContract(null);
+                  resetForm();
+                  setCurrentStep(1);
+                  setShowModal(true);
+                }}
+              >
+                <i className="ri-add-circle-line"></i> إضافة عقد جديد
+              </button>
+              <button className="btn btn-outline-secondary" onClick={exportCsv}>
+                <i className="ri-download-2-line"></i> تصدير CSV
+              </button>
+            </div>
+          )}
       </div>
 
       {/* Segmented filter for expiry with counts */}
@@ -592,80 +577,81 @@ const Contracts = () => {
             const expiring = !expired && isExpiringSoon(contract.end_date);
             const urgent = !expired && isExpiringWithin7(contract.end_date);
             return (
-            <div key={contract.id} className={`contract-card ${expired ? 'expired' : expiring ? 'expiring' : ''} ${urgent ? 'urgent' : ''}`}>
-              <div className="card-header">
-                <h3>عقد رقم {contract.contract_number}</h3>
-                <div className="badges-right">
-                  {expired && <span className="status-badge expired">منتهي</span>}
-                  {urgent && <span className="status-badge urgent">ينتهي خلال 7 أيام</span>}
-                  {!urgent && expiring && <span className="status-badge expiring">ينتهي قريباً</span>}
-                  <span className="type-badge">{getTypeName(contract.contract_type)}</span>
+              <div key={contract.id} className={`contract-card ${expired ? 'expired' : expiring ? 'expiring' : ''} ${urgent ? 'urgent' : ''}`}>
+                <div className="card-header">
+                  <h3>عقد رقم {contract.contract_number}</h3>
+                  <div className="badges-right">
+                    {expired && <span className="status-badge expired">منتهي</span>}
+                    {urgent && <span className="status-badge urgent">ينتهي خلال 7 أيام</span>}
+                    {!urgent && expiring && <span className="status-badge expiring">ينتهي قريباً</span>}
+                    <span className="type-badge">{getTypeName(contract.contract_type)}</span>
+                  </div>
                 </div>
-              </div>
-              <p className="description">{contract.content}</p>
-              <div className="card-details">
-                <div className="detail-item">
-                  <i className="ri-hashtag"></i>
-                  <span>الرقم العام: {contract.general_number || "-"}</span>
-                </div>
-                <div className="detail-item">
-                  <i className="ri-calendar-check-line"></i>
-                  <span>
-                    تاريخ الاستلام:{" "}
-                    {contract.date_received
-                      ? new Date(contract.date_received).toLocaleDateString("ar")
-                      : "-"}
-                  </span>
-                </div>
-                {contract.end_date && (
+                <p className="description">{contract.content}</p>
+                <div className="card-details">
                   <div className="detail-item">
-                    <i className="ri-calendar-close-line"></i>
+                    <i className="ri-hashtag"></i>
+                    <span>الرقم العام: {contract.general_number || "-"}</span>
+                  </div>
+                  <div className="detail-item">
+                    <i className="ri-calendar-check-line"></i>
                     <span>
-                      تاريخ الانتهاء:{" "}
-                      {new Date(contract.end_date).toLocaleDateString("ar")}
+                      تاريخ الاستلام:{" "}
+                      {contract.date_received
+                        ? new Date(contract.date_received).toLocaleDateString("ar")
+                        : "-"}
                     </span>
                   </div>
-                )}
-                {contract.archive_date && (
-                  <div className="detail-item">
-                    <i className="ri-archive-line"></i>
-                    <span>
-                      تاريخ الحفظ:{" "}
-                      {new Date(contract.archive_date).toLocaleDateString("ar")}
-                    </span>
-                  </div>
-                )}
-                {contract.file && (
-                  <a
-                    href={contract.file}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="file-link"
-                  >
-                    <i className="ri-file-pdf-line"></i> عرض الملف
-                  </a>
-                )}
-              </div>
-              {(user?.role === "President" ||
-                user?.role === "GeneralManager" ||
-                user?.role === "DepartmentManager") && (
-                <div className="card-actions">
-                  <button
-                    className="btn btn-sm btn-edit"
-                    onClick={() => handleEdit(contract)}
-                  >
-                    <i className="ri-pencil-line"></i> تعديل
-                  </button>
-                  <button
-                    className="btn btn-sm btn-delete"
-                    onClick={() => handleDelete(contract.id)}
-                  >
-                    <i className="ri-delete-bin-line"></i> حذف
-                  </button>
+                  {contract.end_date && (
+                    <div className="detail-item">
+                      <i className="ri-calendar-close-line"></i>
+                      <span>
+                        تاريخ الانتهاء:{" "}
+                        {new Date(contract.end_date).toLocaleDateString("ar")}
+                      </span>
+                    </div>
+                  )}
+                  {contract.archive_date && (
+                    <div className="detail-item">
+                      <i className="ri-archive-line"></i>
+                      <span>
+                        تاريخ الحفظ:{" "}
+                        {new Date(contract.archive_date).toLocaleDateString("ar")}
+                      </span>
+                    </div>
+                  )}
+                  {contract.file && (
+                    <a
+                      href={contract.file}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="file-link"
+                    >
+                      <i className="ri-file-pdf-line"></i> عرض الملف
+                    </a>
+                  )}
                 </div>
-              )}
-            </div>
-          )})
+                {(user?.role === "President" ||
+                  user?.role === "GeneralManager" ||
+                  user?.role === "DepartmentManager") && (
+                    <div className="card-actions">
+                      <button
+                        className="btn btn-sm btn-edit"
+                        onClick={() => handleEdit(contract)}
+                      >
+                        <i className="ri-pencil-line"></i> تعديل
+                      </button>
+                      <button
+                        className="btn btn-sm btn-delete"
+                        onClick={() => handleDelete(contract.id)}
+                      >
+                        <i className="ri-delete-bin-line"></i> حذف
+                      </button>
+                    </div>
+                  )}
+              </div>
+            )
+          })
         )}
       </div>
 

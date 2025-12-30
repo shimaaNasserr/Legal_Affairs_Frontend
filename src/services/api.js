@@ -63,7 +63,6 @@ export const api = createApi({
         url: "investigations/",
         method: "POST",
         body: formData,
-        headers: { "Content-Type": "multipart/form-data" },
       }),
       invalidatesTags: ["Investigations"],
     }),
@@ -73,7 +72,6 @@ export const api = createApi({
         url: `investigations/${id}/`,
         method: "PUT",
         body: formData,
-        headers: { "Content-Type": "multipart/form-data" },
       }),
       invalidatesTags: (result, error, { id }) => [
         "Investigations",
@@ -116,7 +114,6 @@ export const api = createApi({
         url: "appeals/",
         method: "POST",
         body: formData,
-        headers: { "Content-Type": "multipart/form-data" },
       }),
       invalidatesTags: ["Appeals"],
     }),
@@ -126,7 +123,6 @@ export const api = createApi({
         url: `appeals/${id}/`,
         method: "PUT",
         body: formData,
-        headers: { "Content-Type": "multipart/form-data" },
       }),
       invalidatesTags: (result, error, { id }) => [
         "Appeals",
@@ -178,6 +174,14 @@ export const api = createApi({
       invalidatesTags: ["Cases"],
     }),
 
+    deleteCase: builder.mutation({
+      query: (id) => ({
+        url: `cases/${id}/`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Cases"],
+    }),
+
     // -----------------------------------------
     // Contracts
     // -----------------------------------------
@@ -194,6 +198,35 @@ export const api = createApi({
       query: (id) => `contracts/${id}/`,
       providesTags: (result, error, id) => [{ type: "Contracts", id }],
       keepUnusedDataFor: 300,
+    }),
+
+    createContract: builder.mutation({
+      query: (formData) => ({
+        url: "contracts/",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Contracts"],
+    }),
+
+    updateContract: builder.mutation({
+      query: ({ id, formData }) => ({
+        url: `contracts/${id}/`,
+        method: "PATCH",
+        body: formData,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        "Contracts",
+        { type: "Contracts", id },
+      ],
+    }),
+
+    deleteContract: builder.mutation({
+      query: (id) => ({
+        url: `contracts/${id}/`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Contracts"],
     }),
 
     // -----------------------------------------
@@ -230,6 +263,35 @@ export const api = createApi({
       query: (id) => `fatwas/${id}/`,
       providesTags: (result, error, id) => [{ type: "Fatwas", id }],
       keepUnusedDataFor: 300,
+    }),
+
+    createFatwa: builder.mutation({
+      query: (formData) => ({
+        url: "fatwas/",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Fatwas"],
+    }),
+
+    updateFatwa: builder.mutation({
+      query: ({ id, formData }) => ({
+        url: `fatwas/${id}/`,
+        method: "PATCH",
+        body: formData,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        "Fatwas",
+        { type: "Fatwas", id },
+      ],
+    }),
+
+    deleteFatwa: builder.mutation({
+      query: (id) => ({
+        url: `fatwas/${id}/`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Fatwas"],
     }),
 
     // -----------------------------------------
@@ -284,6 +346,12 @@ export const api = createApi({
       invalidatesTags: ["Users"],
     }),
 
+    getUserRoles: builder.query({
+      query: () => ({ url: "accounts/roles/" }),
+      providesTags: ["UserRoles"],
+      keepUnusedDataFor: 300,
+    }),
+
     // -----------------------------------------
     // Reports
     // -----------------------------------------
@@ -325,15 +393,22 @@ export const {
   useGetCaseByIdQuery,
   useAddCaseMutation,
   useUpdateCaseMutation,
+  useDeleteCaseMutation,
 
   useGetContractsQuery,
   useGetContractByIdQuery,
+  useCreateContractMutation,
+  useUpdateContractMutation,
+  useDeleteContractMutation,
 
   useGetCourtsQuery,
   useGetDepartmentsQuery,
 
   useGetFatwasQuery,
   useGetFatwaByIdQuery,
+  useCreateFatwaMutation,
+  useUpdateFatwaMutation,
+  useDeleteFatwaMutation,
 
   useGetUsersQuery,
   useAddUserMutation,
@@ -341,6 +416,7 @@ export const {
   useUpdateUserMutation,
   useDeactivateUserMutation,
   useReactivateUserMutation,
+  useGetUserRolesQuery,
 
   useGetReportsSummaryQuery,
   useGetReportsCasesByStatusQuery,

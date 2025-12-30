@@ -17,7 +17,11 @@ const RULING_CHOICES = [
 ];
 
 export default function AddCaseForm({ refetchCases }) {
-  const { courtId: paramCourtId, courtName: paramCourtName, id: editId } = useParams();
+  const {
+    courtId: paramCourtId,
+    courtName: paramCourtName,
+    id: editId,
+  } = useParams();
   const [searchParams] = useSearchParams();
   const divisionNameParam = searchParams.get("divisionName");
 
@@ -50,7 +54,11 @@ export default function AddCaseForm({ refetchCases }) {
       setIsEdit(true);
       fetchCase(editId);
     } else if (paramCourtName) {
-      setCourtDisplay(divisionNameParam ? `${paramCourtName} - ${divisionNameParam}` : paramCourtName);
+      setCourtDisplay(
+        divisionNameParam
+          ? `${paramCourtName} - ${divisionNameParam}`
+          : paramCourtName
+      );
     }
   }, [editId]);
 
@@ -77,7 +85,11 @@ export default function AddCaseForm({ refetchCases }) {
         file: null,
       });
 
-      setCourtDisplay(data.division_name ? `${data.court_name} - ${data.division_name}` : data.court_name);
+      setCourtDisplay(
+        data.division_name
+          ? `${data.court_name} - ${data.division_name}`
+          : data.court_name
+      );
     } catch (err) {
       alert("فشل تحميل بيانات القضية");
     } finally {
@@ -92,30 +104,61 @@ export default function AddCaseForm({ refetchCases }) {
       updated[index] = value;
       setFormData({ ...formData, hearing_dates: updated });
     } else if (name === "appeal_status") {
-      setFormData({ ...formData, [name]: value === "true" ? true : value === "false" ? false : null });
+      setFormData({
+        ...formData,
+        [name]: value === "true" ? true : value === "false" ? false : null,
+      });
     } else {
       setFormData({ ...formData, [name]: files ? files[0] : value });
     }
   };
 
-  const addHearingDate = () => setFormData({ ...formData, hearing_dates: [...formData.hearing_dates, ""] });
+  const addHearingDate = () =>
+    setFormData({
+      ...formData,
+      hearing_dates: [...formData.hearing_dates, ""],
+    });
   const removeHearingDate = (index) => {
     const updated = [...formData.hearing_dates];
     updated.splice(index, 1);
-    setFormData({ ...formData, hearing_dates: updated.length ? updated : [""] });
+    setFormData({
+      ...formData,
+      hearing_dates: updated.length ? updated : [""],
+    });
   };
 
   const validateForm = () => {
     const newFieldErrors = [];
     const newErrors = [];
 
-    if (!formData.date_received) { newFieldErrors.push("date_received"); newErrors.push("تاريخ ورود الدعوى مطلوب"); }
-    if (!formData.case_number) { newFieldErrors.push("case_number"); newErrors.push("رقم الحصر مطلوب"); }
-    if (!formData.lawsuit_number) { newFieldErrors.push("lawsuit_number"); newErrors.push("رقم الدعوى مطلوب"); }
-    if (!formData.plaintiff) { newFieldErrors.push("plaintiff"); newErrors.push("اسم المدعي مطلوب"); }
-    if (!formData.defendant) { newFieldErrors.push("defendant"); newErrors.push("اسم المدعى عليه مطلوب"); }
-    if (!formData.requests) { newFieldErrors.push("requests"); newErrors.push("الطلبات مطلوبة"); }
-    if (!formData.case_status) { newFieldErrors.push("case_status"); newErrors.push("حالة القضية مطلوبة"); }
+    if (!formData.date_received) {
+      newFieldErrors.push("date_received");
+      newErrors.push("تاريخ ورود الدعوى مطلوب");
+    }
+    if (!formData.case_number) {
+      newFieldErrors.push("case_number");
+      newErrors.push("رقم الحصر مطلوب");
+    }
+    if (!formData.lawsuit_number) {
+      newFieldErrors.push("lawsuit_number");
+      newErrors.push("رقم الدعوى مطلوب");
+    }
+    if (!formData.plaintiff) {
+      newFieldErrors.push("plaintiff");
+      newErrors.push("اسم المدعي مطلوب");
+    }
+    if (!formData.defendant) {
+      newFieldErrors.push("defendant");
+      newErrors.push("اسم المدعى عليه مطلوب");
+    }
+    if (!formData.requests) {
+      newFieldErrors.push("requests");
+      newErrors.push("الطلبات مطلوبة");
+    }
+    if (!formData.case_status) {
+      newFieldErrors.push("case_status");
+      newErrors.push("حالة القضية مطلوبة");
+    }
 
     setFieldErrors(newFieldErrors);
     setErrors(newErrors);
@@ -128,10 +171,11 @@ export default function AddCaseForm({ refetchCases }) {
     if (!validateForm()) return;
 
     const formToSend = new FormData();
-    const validHearingDates = formData.hearing_dates.filter(d => d);
+    const validHearingDates = formData.hearing_dates.filter((d) => d);
     Object.entries(formData).forEach(([key, value]) => {
       if (value !== null && value !== "") {
-        if (key === "hearing_dates") formToSend.append(key, JSON.stringify(validHearingDates));
+        if (key === "hearing_dates")
+          formToSend.append(key, JSON.stringify(validHearingDates));
         else formToSend.append(key, value);
       }
     });
@@ -163,7 +207,9 @@ export default function AddCaseForm({ refetchCases }) {
 
   return (
     <div className="add-case-page">
-      <h2>{isEdit ? "تعديل قضية" : "إضافة قضية"} - {courtDisplay}</h2>
+      <h2>
+        {isEdit ? "تعديل قضية" : "إضافة قضية"} - {courtDisplay}
+      </h2>
       <form onSubmit={handleSubmit} className="case-form">
         <label>تاريخ ورود الدعوى *</label>
         <input
@@ -176,9 +222,17 @@ export default function AddCaseForm({ refetchCases }) {
 
         <label>
           رقم الحصر العام
-          <span className="note"> (سيتم توليده تلقائياً إذا لم يتم إدخاله)</span>
+          <span className="note">
+            {" "}
+            (سيتم توليده تلقائياً إذا لم يتم إدخاله)
+          </span>
         </label>
-        <input type="text" name="general_number" value={formData.general_number} onChange={handleChange} />
+        <input
+          type="text"
+          name="general_number"
+          value={formData.general_number}
+          onChange={handleChange}
+        />
 
         <label>رقم حصر القضايا *</label>
         <input
@@ -195,11 +249,18 @@ export default function AddCaseForm({ refetchCases }) {
           name="lawsuit_number"
           value={formData.lawsuit_number}
           onChange={handleChange}
-          className={fieldErrors.includes("lawsuit_number") ? "error-field" : ""}
+          className={
+            fieldErrors.includes("lawsuit_number") ? "error-field" : ""
+          }
         />
 
         <label>المحكمة</label>
-        <input type="text" disabled value={courtDisplay} style={{ background: "#eee", color: "#777" }} />
+        <input
+          type="text"
+          disabled
+          value={courtDisplay}
+          style={{ background: "#eee", color: "#777" }}
+        />
 
         <label>اسم المدعي *</label>
         <input
@@ -236,9 +297,21 @@ export default function AddCaseForm({ refetchCases }) {
               value={date}
               onChange={(e) => handleChange(e, idx)}
             />
-            <button type="button" className="btn btn-sm btn-remove" onClick={() => removeHearingDate(idx)}>حذف</button>
+            <button
+              type="button"
+              className="btn btn-sm btn-remove"
+              onClick={() => removeHearingDate(idx)}
+            >
+              حذف
+            </button>
             {idx === formData.hearing_dates.length - 1 && (
-              <button type="button" className="btn btn-sm btn-add" onClick={addHearingDate}>+</button>
+              <button
+                type="button"
+                className="btn btn-sm btn-add"
+                onClick={addHearingDate}
+              >
+                +
+              </button>
             )}
           </div>
         ))}
@@ -246,11 +319,19 @@ export default function AddCaseForm({ refetchCases }) {
         <label>الحكم الصادر</label>
         <select name="ruling" value={formData.ruling} onChange={handleChange}>
           <option value="">اختيار...</option>
-          {RULING_CHOICES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+          {RULING_CHOICES.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
         </select>
 
         <label>موقف الدعوى من الطعن</label>
-        <select name="appeal_status" value={formData.appeal_status ?? ""} onChange={handleChange}>
+        <select
+          name="appeal_status"
+          value={formData.appeal_status ?? ""}
+          onChange={handleChange}
+        >
           <option value="">اختيار...</option>
           <option value={true}>تم الطعن</option>
           <option value={false}>لم يتم الطعن</option>
@@ -264,34 +345,59 @@ export default function AddCaseForm({ refetchCases }) {
           className={fieldErrors.includes("case_status") ? "error-field" : ""}
         >
           <option value="">اختيار...</option>
-          {CASE_STATUS_CHOICES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          {CASE_STATUS_CHOICES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
         </select>
 
         <label>تاريخ الحفظ</label>
-        <input type="date" name="saved_date" value={formData.saved_date} onChange={handleChange} />
+        <input
+          type="date"
+          name="saved_date"
+          value={formData.saved_date}
+          onChange={handleChange}
+        />
 
         <label>ملاحظات الدعوى</label>
-        <textarea name="notes" value={formData.notes} onChange={handleChange}></textarea>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+        ></textarea>
 
         <label>ملف الدعوى</label>
-        <input type="file" name="file"
-        accept=".pdf, .doc, .docx, application/pdf, application/msword" 
-        onChange={handleChange} />
+        <input
+          type="file"
+          name="file"
+          accept=".pdf, .doc, .docx, application/pdf, application/msword"
+          onChange={handleChange}
+        />
 
         <div className="form-actions-left">
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "جاري الحفظ..." : isEdit ? "حفظ التعديلات" : "حفظ القضية"}
+            {loading
+              ? "جاري الحفظ..."
+              : isEdit
+              ? "حفظ التعديلات"
+              : "حفظ القضية"}
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate("/cases")}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => navigate("/cases")}
+          >
             إلغاء
           </button>
         </div>
 
         {errors.length > 0 && (
           <div className="error-log">
-            <h4>❌ هناك مشاكل في الفورم:</h4>
             <ul>
-              {errors.map((err, idx) => <li key={idx}>{err}</li>)}
+              {errors.map((err, idx) => (
+                <li key={idx}>{err}</li>
+              ))}
             </ul>
           </div>
         )}

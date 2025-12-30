@@ -1,18 +1,15 @@
 import React, {
   useState,
-  useEffect,
   useContext,
   useMemo,
-  useCallback,
+  useEffect,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
+import { useGetCasesQuery, useDeleteCaseMutation } from "../../services/api";
 import "./Cases.css";
 
 const ITEMS_PER_PAGE = 8;
-const CACHE_KEY = "cases_cache";
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 const CASE_STATUS_NAMES = {
   pending: "قيد الانتظار",
@@ -26,85 +23,47 @@ const Cases = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [cases, setCases] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [appealNotifications, setAppealNotifications] = useState([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [lastFetchTime, setLastFetchTime] = useState(0);
 
-  const fetchCases = useCallback(async () => {
-    if (!user) return;
-
-    // Check cache first
-    const now = Date.now();
-    const cachedData = localStorage.getItem(CACHE_KEY);
-
-    if (cachedData) {
-      const { data, timestamp } = JSON.parse(cachedData);
-      // Use cached data if it's not expired
-      if (now - timestamp < CACHE_DURATION) {
-        setCases(data);
-        setAppealNotifications(data.filter((c) => c.appeal_status === null));
-        setLoading(false);
-        return;
-      }
+  // RTK Query Params
+  const queryParams = useMemo(() => {
+    const params = {
+      page: currentPage,
+      page_size: ITEMS_PER_PAGE,
+      search: searchTerm,
+    };
+    if (statusFilter !== "all") {
+      params.case_status = statusFilter;
     }
+    return params;
+  }, [currentPage, searchTerm, statusFilter]);
 
-    setLoading(true);
-    try {
-      let { data } = await axiosInstance.get("cases/");
+  const {
+    data: casesResponse,
+    isLoading: loading,
+    error,
+    refetch
+  } = useGetCasesQuery(queryParams, {
+    refetchOnMountOrArgChange: true,
+  });
 
-      // Filter cases for lawyers in إدارة القضايا
-      if (user.role === "Lawyer" && user.department_name === "إدارة القضايا") {
-        data = data.filter((c) => c.created_by === user.id);
-      }
+  const [deleteCase] = useDeleteCaseMutation();
 
-      // Update cache
-      const cacheData = {
-        data,
-        timestamp: now,
-      };
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-      setLastFetchTime(now);
+  // Handle paginated response
+  const cases = casesResponse?.results || [];
+  const totalCount = casesResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-      setCases(data);
-      setAppealNotifications(data.filter((c) => c.appeal_status === null));
-    } catch (err) {
-      console.error("❌ Error fetching cases:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  // Build notifications from current page data (optimization: don't load all for notifications)
+  // Ideally, this should come from a specialized stats endpoint
+  const appealNotifications = cases.filter((c) => c.appeal_status === null);
 
   useEffect(() => {
-    fetchCases();
-  }, [user]);
-
-  const filteredCases = useMemo(() => {
-    return cases.filter((c) => {
-      const search = searchTerm.toLowerCase();
-      const matchesSearch =
-        c.case_number?.toLowerCase().includes(search) ||
-        c.lawsuit_number?.toLowerCase().includes(search) ||
-        c.plaintiff?.toLowerCase().includes(search) ||
-        c.defendant?.toLowerCase().includes(search);
-
-      const matchesStatus =
-        statusFilter === "all" || c.case_status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [cases, searchTerm, statusFilter]);
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredCases.length / ITEMS_PER_PAGE);
-  const currentItems = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredCases.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredCases, currentPage]);
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -113,10 +72,16 @@ const Cases = () => {
     }
   };
 
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+  const handleDelete = async (id) => {
+    try {
+      await deleteCase(id).unwrap();
+      setConfirmDeleteId(null);
+      // RTK Query will automatically refetch
+    } catch (err) {
+      console.error("فشل حذف القضية", err);
+      // Optional: show error toast
+    }
+  };
 
   const canEditCase = (c) => {
     if (!user) return false;
@@ -141,17 +106,6 @@ const Cases = () => {
     );
   };
 
-  const handleDelete = async (id) => {
-    try {
-      await axiosInstance.delete(`/cases/${id}/`);
-      setCases((prev) => prev.filter((c) => c.id !== id));
-      setConfirmDeleteId(null);
-    } catch (err) {
-      console.error("فشل حذف القضية", err);
-      setConfirmDeleteId(null);
-    }
-  };
-
   if (loading) return <div className="loading">جاري التحميل...</div>;
 
   return (
@@ -171,7 +125,7 @@ const Cases = () => {
 
       {appealNotifications.length > 0 && (
         <div className="alert alert-warning appeal-alert">
-          ⚠ هناك {appealNotifications.length} قضية لم يتم تحديد موقف الطعن لها!
+          ⚠ هناك {appealNotifications.length} قضية في هذه الصفحة لم يتم تحديد موقف الطعن لها!
         </div>
       )}
 
@@ -197,20 +151,20 @@ const Cases = () => {
       </div>
 
       <div className="pagination-info">
-        <span>إجمالي النتائج: {filteredCases.length}</span>
+        <span>إجمالي النتائج: {totalCount}</span>
         <span>
           الصفحة {currentPage} من {totalPages || 1}
         </span>
       </div>
 
       <div className="cases-grid">
-        {currentItems.length === 0 ? (
+        {cases.length === 0 ? (
           <div className="empty-state">
             <i className="ri-inbox-line"></i>
             <p>لا توجد قضايا</p>
           </div>
         ) : (
-          currentItems.map((c) => {
+          cases.map((c) => {
             const hasDivision =
               c.division_name &&
               c.division_name.trim() !== "-" &&
@@ -254,8 +208,8 @@ const Cases = () => {
                     {c.appeal_status === null
                       ? "غير محدد"
                       : c.appeal_status === true
-                      ? "تم الطعن"
-                      : "لم يتم الطعن"}
+                        ? "تم الطعن"
+                        : "لم يتم الطعن"}
                   </div>
                 </div>
 
@@ -343,9 +297,8 @@ const Cases = () => {
               <button
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
-                className={`pagination-button ${
-                  currentPage === pageNum ? "active" : ""
-                }`}
+                className={`pagination-button ${currentPage === pageNum ? "active" : ""
+                  }`}
               >
                 {pageNum}
               </button>
@@ -359,9 +312,8 @@ const Cases = () => {
           {totalPages > 5 && currentPage < totalPages - 2 && (
             <button
               onClick={() => handlePageChange(totalPages)}
-              className={`pagination-button ${
-                currentPage === totalPages ? "active" : ""
-              }`}
+              className={`pagination-button ${currentPage === totalPages ? "active" : ""
+                }`}
             >
               {totalPages}
             </button>

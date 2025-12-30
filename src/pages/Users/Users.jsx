@@ -74,37 +74,65 @@ const Users = () => {
     setError("");
     setSuccess("");
 
-    ```
-try {
-  const submitData = { ...formData };
-  if (editingUser && !submitData.password) delete submitData.password;
+    try {
+      const submitData = { ...formData };
+      if (editingUser && !submitData.password) delete submitData.password;
 
-  if (editingUser) {
-    const updatedUser = await updateUser({
-      id: editingUser.id,
-      formData: submitData,
-    }).unwrap();
+      if (editingUser) {
+        const updatedUser = await updateUser({
+          id: editingUser.id,
+          formData: submitData,
+        }).unwrap();
 
-    // Update local state
-    setLocalUsers((prev) =>
-      prev.map((user) =>
-        user.id === updatedUser.id ? { ...user, ...updatedUser } : user
-      )
-    );
-    setSuccess("تم تحديث المستخدم بنجاح");
-  } else {
-    const newUser = await addUser(submitData).unwrap();
-    setLocalUsers((prev) => [...prev, newUser]);
-    setSuccess("تم إضافة المستخدم بنجاح");
-  }
+        // Update local state
+        setLocalUsers((prev) =>
+          prev.map((user) =>
+            user.id === updatedUser.id ? { ...user, ...updatedUser } : user
+          )
+        );
+        setSuccess("تم تحديث المستخدم بنجاح");
+      } else {
+        const newUser = await addUser(submitData).unwrap();
+        setLocalUsers((prev) => [...prev, newUser]);
+        setSuccess("تم إضافة المستخدم بنجاح");
+      }
 
-  setShowModal(false);
-  resetForm();
-} catch (err) {
-  setError(err.data?.detail || "فشل في حفظ المستخدم");
-  console.error("User submit error:", err);
-}
-```;
+      setShowModal(false);
+      resetForm();
+    } catch (err) {
+      console.error("User submit error:", err);
+      // Handle different error formats from backend
+      let errorMessage = "فشل في حفظ المستخدم";
+      if (err.data) {
+        if (typeof err.data === "string") {
+          errorMessage = err.data;
+        } else if (err.data.detail) {
+          errorMessage = err.data.detail;
+        } else if (typeof err.data === "object") {
+          // Handle field-specific validation errors
+          const fieldErrors = Object.entries(err.data)
+            .map(([field, errors]) => {
+              const fieldName =
+                {
+                  username: "اسم المستخدم",
+                  email: "البريد الإلكتروني",
+                  first_name: "الاسم الأول",
+                  last_name: "اسم العائلة",
+                  role: "الدور",
+                  department: "الإدارة",
+                  password: "كلمة المرور",
+                }[field] || field;
+              const errorText = Array.isArray(errors)
+                ? errors.join(", ")
+                : errors;
+              return `${fieldName}: ${errorText}`;
+            })
+            .join("\n");
+          errorMessage = fieldErrors || errorMessage;
+        }
+      }
+      setError(errorMessage);
+    }
   };
 
   const handleEdit = (user) => {

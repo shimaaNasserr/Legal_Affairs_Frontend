@@ -1,7 +1,12 @@
 import React, { useState, useContext } from "react";
-import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
-import { useGetFatwasQuery, useGetDepartmentsQuery } from "../../services/api";
+import {
+  useGetFatwasQuery,
+  useGetDepartmentsQuery,
+  useCreateFatwaMutation,
+  useUpdateFatwaMutation,
+  useDeleteFatwaMutation,
+} from "../../services/api";
 import "./Fatwas.css";
 
 const Fatwas = () => {
@@ -22,9 +27,13 @@ const Fatwas = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  // RTK Query hooks
   const { data: fatwasData, isLoading: loading, error: fatwasError } = useGetFatwasQuery({ page, page_size: pageSize });
   const { data: departments = [] } = useGetDepartmentsQuery();
-  
+  const [createFatwa] = useCreateFatwaMutation();
+  const [updateFatwa] = useUpdateFatwaMutation();
+  const [deleteFatwa] = useDeleteFatwaMutation();
+
   const fatwas = fatwasData?.results || fatwasData || [];
   const totalCount = typeof fatwasData === "object" && fatwasData ? fatwasData.count ?? fatwas.length : fatwas.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -67,23 +76,19 @@ const Fatwas = () => {
       });
 
       if (editingFatwa) {
-        // Use PATCH so we don't need to resend required fields when editing
-        await axiosInstance.patch(`fatwas/${editingFatwa.id}/`, submitData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await updateFatwa({
+          id: editingFatwa.id,
+          formData: submitData,
+        }).unwrap();
       } else {
-        await axiosInstance.post("fatwas/", submitData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await createFatwa(submitData).unwrap();
       }
       setShowModal(false);
       setEditingFatwa(null);
       resetForm();
-      // Cache will be invalidated by RTK Query if we add mutations
-      window.location.reload(); // Temporary: reload to refresh cache
     } catch (err) {
       console.error("Error saving fatwa:", err);
-      const data = err?.response?.data;
+      const data = err?.data;
       const apiDetail = data?.detail || data?.message;
       if (data && typeof data === "object" && !Array.isArray(data)) {
         const fe = {};
@@ -115,9 +120,7 @@ const Fatwas = () => {
     if (!window.confirm("هل أنت متأكد من حذف هذه الفتوى؟")) return;
 
     try {
-      await axiosInstance.delete(`fatwas/${fatwaId}/`);
-      // Cache will be invalidated by RTK Query if we add mutations
-      window.location.reload(); // Temporary: reload to refresh cache
+      await deleteFatwa(fatwaId).unwrap();
     } catch (err) {
       console.error("Error deleting fatwa:", err);
       setError("فشل في حذف الفتوى");
@@ -181,18 +184,18 @@ const Fatwas = () => {
         {(user?.role === "President" ||
           user?.role === "GeneralManager" ||
           user?.role === "DepartmentManager") && (
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              setEditingFatwa(null);
-              resetForm();
-              setCurrentStep(1);
-              setShowModal(true);
-            }}
-          >
-            <i className="ri-add-circle-line"></i> إضافة فتوى جديدة
-          </button>
-        )}
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setEditingFatwa(null);
+                resetForm();
+                setCurrentStep(1);
+                setShowModal(true);
+              }}
+            >
+              <i className="ri-add-circle-line"></i> إضافة فتوى جديدة
+            </button>
+          )}
       </div>
 
       {(error || fatwasError) && (
@@ -264,21 +267,21 @@ const Fatwas = () => {
               {(user?.role === "President" ||
                 user?.role === "GeneralManager" ||
                 user?.role === "DepartmentManager") && (
-                <div className="card-actions">
-                  <button
-                    className="btn btn-sm btn-edit"
-                    onClick={() => handleEdit(fatwa)}
-                  >
-                    <i className="ri-pencil-line"></i> تعديل
-                  </button>
-                  <button
-                    className="btn btn-sm btn-delete"
-                    onClick={() => handleDelete(fatwa.id)}
-                  >
-                    <i className="ri-delete-bin-line"></i> حذف
-                  </button>
-                </div>
-              )}
+                  <div className="card-actions">
+                    <button
+                      className="btn btn-sm btn-edit"
+                      onClick={() => handleEdit(fatwa)}
+                    >
+                      <i className="ri-pencil-line"></i> تعديل
+                    </button>
+                    <button
+                      className="btn btn-sm btn-delete"
+                      onClick={() => handleDelete(fatwa.id)}
+                    >
+                      <i className="ri-delete-bin-line"></i> حذف
+                    </button>
+                  </div>
+                )}
             </div>
           ))
         )}
