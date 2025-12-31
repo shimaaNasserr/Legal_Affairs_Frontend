@@ -25,6 +25,8 @@ const Cases = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -38,8 +40,10 @@ const Cases = () => {
     if (statusFilter !== "all") {
       params.case_status = statusFilter;
     }
+    if (dateFrom) params.date_from = dateFrom;
+    if (dateTo) params.date_to = dateTo;
     return params;
-  }, [currentPage, searchTerm, statusFilter]);
+  }, [currentPage, searchTerm, statusFilter, dateFrom, dateTo]);
 
   const {
     data: casesResponse,
@@ -63,7 +67,7 @@ const Cases = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, dateFrom, dateTo]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -132,10 +136,21 @@ const Cases = () => {
       <div className="filters">
         <input
           type="text"
-          placeholder="بحث في القضايا..."
+          placeholder="بحث بالاسم أو الرقم..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+
+        <div className="d-flex gap-2 align-items-center">
+          <div>
+            <label className="me-2">من</label>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </div>
+          <div>
+            <label className="me-2">إلى</label>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          </div>
+        </div>
 
         <select
           value={statusFilter}

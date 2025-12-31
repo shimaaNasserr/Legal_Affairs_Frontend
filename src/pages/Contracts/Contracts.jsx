@@ -21,6 +21,8 @@ const Contracts = () => {
   const [sortBySoonest, setSortBySoonest] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [formData, setFormData] = useState({
     date_received: "",
     contract_number: "",
@@ -40,7 +42,9 @@ const Contracts = () => {
     page,
     page_size: pageSize,
     ...(expiryFilter !== "all" ? { expiry: expiryFilter } : {}),
-  }), [page, pageSize, expiryFilter]);
+    ...(dateFrom ? { date_from: dateFrom } : {}),
+    ...(dateTo ? { date_to: dateTo } : {}),
+  }), [page, pageSize, expiryFilter, dateFrom, dateTo]);
 
   const { data: contractsData, isLoading: loading, error: contractsError } = useGetContractsQuery(queryParams);
   const { data: departments = [] } = useGetDepartmentsQuery();
@@ -527,6 +531,17 @@ const Contracts = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+
+        <div className="d-flex align-items-end gap-2">
+          <div>
+            <label className="form-label">من</label>
+            <input className="form-control" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </div>
+          <div>
+            <label className="form-label">إلى</label>
+            <input className="form-control" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          </div>
         </div>
 
         <select

@@ -18,14 +18,16 @@ const Investigations = () => {
   const [editingInvestigation, setEditingInvestigation] = useState(null);
   const [isLoadingEditData, setIsLoadingEditData] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [currentEditId, setCurrentEditId] = useState(null);
-  const [pageSize] = useState(5);
+  const [pageSize] = useState(8);
 
   // Reset to page 1 when search term changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, dateFrom, dateTo]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -135,34 +137,23 @@ const Investigations = () => {
   };
 
   // Fetch all items for client-side pagination and filtering
+  const params = {
+    page: currentPage,
+    page_size: pageSize,
+    ...(searchTerm ? { search: searchTerm } : {}),
+    ...(dateFrom ? { date_from: dateFrom } : {}),
+    ...(dateTo ? { date_to: dateTo } : {}),
+  };
+
   const {
     data: investigationsResponse,
     isLoading: loading,
     error: queryError,
-  } = useGetInvestigationsQuery({
-    page_size: 1000, // Fetch a large number to get all items
-  });
+  } = useGetInvestigationsQuery(params);
 
-  // Handle both paginated and non-paginated responses
-  const allInvestigations =
-    investigationsResponse?.results || investigationsResponse || [];
-
-  // Filter investigations based on search term
-  const filteredInvestigations = allInvestigations.filter(
-    (inv) =>
-      inv.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.general_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.complainant_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Calculate pagination based on filtered results
-  const totalCount = filteredInvestigations.length;
-  const totalPages = Math.ceil(totalCount / pageSize);
-
-  // Get items for current page (slice filtered results)
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const investigations = filteredInvestigations.slice(startIndex, endIndex);
+  const investigations = investigationsResponse?.results || investigationsResponse || [];
+  const totalCount = typeof investigationsResponse === 'object' && investigationsResponse ? (investigationsResponse.count ?? investigations.length) : investigations.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   // Update the useGetInvestigationByIdQuery to track loading state
   const {
@@ -535,14 +526,34 @@ const Investigations = () => {
         </div>
       )}
 
-      <div className="search-box">
-        <i className="ri-search-line"></i>
-        <input
-          type="text"
-          placeholder="بحث في التحقيقات..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="search-box" style={{ display: 'flex', gap: '12px', alignItems: 'end', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <i className="ri-search-line"></i>
+          <input
+            type="text"
+            placeholder="بحث في التحقيقات..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="form-label">من</label>
+          <input
+            type="date"
+            className="form-control"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="form-label">إلى</label>
+          <input
+            type="date"
+            className="form-control"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="investigations-list">
