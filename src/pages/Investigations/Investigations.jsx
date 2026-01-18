@@ -23,7 +23,7 @@ const Investigations = () => {
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [currentEditId, setCurrentEditId] = useState(null);
-  const [pageSize] = useState(5);
+  const [pageSize] = useState(8);
 
   // Reset to page 1 when search term changes
   React.useEffect(() => {
@@ -138,13 +138,19 @@ const Investigations = () => {
   };
 
   // Fetch all items for client-side pagination and filtering
+  const params = {
+    page: currentPage,
+    page_size: pageSize,
+    ...(searchTerm ? { search: searchTerm } : {}),
+    ...(dateFrom ? { date_from: dateFrom } : {}),
+    ...(dateTo ? { date_to: dateTo } : {}),
+  };
+
   const {
     data: investigationsResponse,
     isLoading: loading,
     error: queryError,
-  } = useGetInvestigationsQuery({
-    page_size: 1000, // Fetch a large number to get all items
-  });
+  } = useGetInvestigationsQuery(params);
 
   // Handle both paginated and non-paginated responses
   const allInvestigations =

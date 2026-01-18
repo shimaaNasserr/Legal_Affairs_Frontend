@@ -8,7 +8,7 @@
 
 .fatwas-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   margin-top: 1.5rem;
 }
@@ -93,6 +93,12 @@
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+  .fatwas-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .fatwas-list {
     grid-template-columns: 1fr;

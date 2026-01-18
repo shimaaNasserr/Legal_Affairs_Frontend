@@ -20,9 +20,9 @@ const Cases = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [nameFilter, setNameFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -36,8 +36,10 @@ const Cases = () => {
     if (statusFilter !== "all") {
       params.case_status = statusFilter;
     }
+    if (dateFrom) params.date_from = dateFrom;
+    if (dateTo) params.date_to = dateTo;
     return params;
-  }, [currentPage, searchTerm, statusFilter]);
+  }, [currentPage, searchTerm, statusFilter, dateFrom, dateTo]);
 
   const {
     data: casesResponse,
@@ -134,7 +136,7 @@ const Cases = () => {
       <div className="filters">
         <input
           type="text"
-          placeholder="بحث في القضايا..."
+          placeholder="بحث بالاسم أو الرقم..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />

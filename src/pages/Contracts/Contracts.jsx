@@ -17,13 +17,13 @@ const Contracts = () => {
   const [editingContract, setEditingContract] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [nameFilter, setNameFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [expiryFilter, setExpiryFilter] = useState("all");
   const [sortBySoonest, setSortBySoonest] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [formData, setFormData] = useState({
     date_received: "",
     contract_number: "",
@@ -648,6 +648,27 @@ const Contracts = () => {
             <input
               type="date"
               placeholder="إلى التاريخ"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="d-flex align-items-end gap-2">
+          <div>
+            <label className="form-label">من</label>
+            <input
+              className="form-control"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="form-label">إلى</label>
+            <input
+              className="form-control"
+              type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
             />
