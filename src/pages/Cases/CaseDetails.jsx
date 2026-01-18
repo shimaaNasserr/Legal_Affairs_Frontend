@@ -12,7 +12,14 @@ export default function CaseDetails() {
     axiosInstance
       .get(`/cases/${id}/`)
       .then((res) => setCaseItem(res.data))
-      .catch(() => navigate("/cases"));
+      .catch((error) => {
+        console.error('Error fetching case:', error);
+        // Check if it's a 403 or 404 error and handle accordingly
+        if (error.response?.status === 403 || error.response?.status === 404) {
+          alert('القضية غير موجودة أو ليس لديك صلاحية لعرضها');
+        }
+        navigate("/cases");
+      });
   }, [id, navigate]);
 
   if (!caseItem) return <p>جاري التحميل...</p>;

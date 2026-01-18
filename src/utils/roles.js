@@ -88,9 +88,7 @@ export const getRoleBasedLinks = (userRole) => {
   }
   // محامي: القضايا فقط
   else if (userRole === ROLES.LAWYER) {
-    links.push(
-      { to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" }
-    );
+    links.push({ to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" });
   }
   // سكرتير: قضايا و تحقيقات و تظلمات
   else if (userRole === ROLES.SECRETARY) {
@@ -105,18 +103,15 @@ export const getRoleBasedLinks = (userRole) => {
 };
 
 // التحقق من إمكانية المستخدم على إنشاء/تعديل/حذف البيانات
-// الرئيس يمكنه فقط القراءة (read-only)
+// الرئيس والمدير العام يمكنهما التعديل الكامل
 export const canModifyData = (user) => {
   if (!user || !user.role) return false;
 
-  // الرئيس يمكنه فقط القراءة
-  if (user.role === ROLES.PRESIDENT) {
-    return false;
+  // الرئيس والمدير العام يمكنهما التعديل الكامل
+  if (user.role === ROLES.PRESIDENT || user.role === ROLES.GENERAL_MANAGER) {
+    return true;
   }
 
-  // باقي الأدوار يمكنها التعديل حسب الصلاحيات
-  return (
-    user.role === ROLES.GENERAL_MANAGER ||
-    user.role === ROLES.DEPARTMENT_MANAGER
-  );
+  // مدير الإدارة يمكن التعديل حسب الصلاحيات
+  return user.role === ROLES.DEPARTMENT_MANAGER;
 };

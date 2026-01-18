@@ -14,6 +14,9 @@ const Appeals = () => {
   const { user } = useContext(AuthContext);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [pageSize] = useState(5);
   // Fetch all items for client-side pagination and filtering
   const {
@@ -27,15 +30,35 @@ const Appeals = () => {
   // Handle both paginated and non-paginated responses
   const allAppeals = appealsResponse?.results || appealsResponse || [];
 
-  // Filter appeals based on search term
-  const filteredAppeals = allAppeals.filter(
-    (appeal) =>
+  // Filter appeals based on search term, name, and date filters
+  const filteredAppeals = allAppeals.filter((appeal) => {
+    // Apply basic search filter
+    const basicSearch =
+      !searchTerm ||
       appeal.appeal_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appeal.appellant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appeal.investigation_title
         ?.toLowerCase()
-        .includes(searchTerm.toLowerCase())
-  );
+        .includes(searchTerm.toLowerCase());
+
+    // Apply name filter
+    const nameMatches =
+      !nameFilter ||
+      appeal.appellant_name?.toLowerCase().includes(nameFilter.toLowerCase());
+
+    // Apply date filter
+    const dateSubmitted = appeal.date_submitted
+      ? new Date(appeal.date_submitted)
+      : null;
+    const dateFromFilter = dateFrom ? new Date(dateFrom) : null;
+    const dateToFilter = dateTo ? new Date(dateTo) : null;
+
+    const dateMatches =
+      (!dateFromFilter || (dateSubmitted && dateSubmitted >= dateFromFilter)) &&
+      (!dateToFilter || (dateSubmitted && dateSubmitted <= dateToFilter));
+
+    return basicSearch && nameMatches && dateMatches;
+  });
 
   // Calculate pagination based on filtered results
   const totalCount = filteredAppeals.length;
@@ -49,7 +72,7 @@ const Appeals = () => {
   // Reset to page 1 when search term changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, nameFilter, dateFrom, dateTo]);
   const { data: investigations = [] } = useGetInvestigationsQuery();
 
   // Mutations with automatic cache invalidation
@@ -296,13 +319,27 @@ const Appeals = () => {
       )}
 
       <div className="search-box">
-        <i className="ri-search"></i>
         <input
           type="text"
           placeholder="بحث في التظلمات..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+
+        <div className="date-range-filter">
+          <input
+            type="date"
+            placeholder="من التاريخ"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+          <input
+            type="date"
+            placeholder="إلى التاريخ"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="appeals-list">

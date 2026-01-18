@@ -237,6 +237,29 @@ textarea::placeholder {
   align-items: center;
 }
 
+.date-range-filter {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.date-range-filter input {
+  padding: 0.875rem 1.25rem;
+  border: 2px solid var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+  font-size: 0.9375rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: all var(--transition-base);
+  min-width: 150px;
+}
+
+.date-range-filter input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(30, 58, 95, 0.1);
+  outline: none;
+}
+
 .filter-select {
   padding: 0.875rem 1.25rem;
   border: 2px solid var(--bg-tertiary);

@@ -18,6 +18,9 @@ const Investigations = () => {
   const [editingInvestigation, setEditingInvestigation] = useState(null);
   const [isLoadingEditData, setIsLoadingEditData] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [currentEditId, setCurrentEditId] = useState(null);
   const [pageSize] = useState(5);
@@ -25,7 +28,7 @@ const Investigations = () => {
   // Reset to page 1 when search term changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, nameFilter, dateFrom, dateTo]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -147,13 +150,32 @@ const Investigations = () => {
   const allInvestigations =
     investigationsResponse?.results || investigationsResponse || [];
 
-  // Filter investigations based on search term
-  const filteredInvestigations = allInvestigations.filter(
-    (inv) =>
+  // Filter investigations based on search term, name, and date filters
+  const filteredInvestigations = allInvestigations.filter((inv) => {
+    // Apply basic search filter
+    const basicSearch =
+      !searchTerm ||
       inv.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.general_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.complainant_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      inv.complainant_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Apply name filter
+    const nameMatches =
+      !nameFilter ||
+      inv.title?.toLowerCase().includes(nameFilter.toLowerCase()) ||
+      inv.complainant_name?.toLowerCase().includes(nameFilter.toLowerCase());
+
+    // Apply date filter
+    const dateReceived = inv.date_received ? new Date(inv.date_received) : null;
+    const dateFromFilter = dateFrom ? new Date(dateFrom) : null;
+    const dateToFilter = dateTo ? new Date(dateTo) : null;
+
+    const dateMatches =
+      (!dateFromFilter || (dateReceived && dateReceived >= dateFromFilter)) &&
+      (!dateToFilter || (dateReceived && dateReceived <= dateToFilter));
+
+    return basicSearch && nameMatches && dateMatches;
+  });
 
   // Calculate pagination based on filtered results
   const totalCount = filteredInvestigations.length;
@@ -536,13 +558,27 @@ const Investigations = () => {
       )}
 
       <div className="search-box">
-        <i className="ri-search-line"></i>
         <input
           type="text"
           placeholder="بحث في التحقيقات..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+
+        <div className="date-range-filter">
+          <input
+            type="date"
+            placeholder="من التاريخ"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+          <input
+            type="date"
+            placeholder="إلى التاريخ"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="investigations-list">

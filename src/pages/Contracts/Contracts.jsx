@@ -5,7 +5,7 @@ import {
   useGetDepartmentsQuery,
   useCreateContractMutation,
   useUpdateContractMutation,
-  useDeleteContractMutation
+  useDeleteContractMutation,
 } from "../../services/api";
 import { useLocation } from "react-router-dom";
 import "./Contracts.css";
@@ -16,6 +16,9 @@ const Contracts = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [editingContract, setEditingContract] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [expiryFilter, setExpiryFilter] = useState("all");
   const [sortBySoonest, setSortBySoonest] = useState(false);
@@ -36,13 +39,20 @@ const Contracts = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const queryParams = useMemo(() => ({
-    page,
-    page_size: pageSize,
-    ...(expiryFilter !== "all" ? { expiry: expiryFilter } : {}),
-  }), [page, pageSize, expiryFilter]);
+  const queryParams = useMemo(
+    () => ({
+      page,
+      page_size: pageSize,
+      ...(expiryFilter !== "all" ? { expiry: expiryFilter } : {}),
+    }),
+    [page, pageSize, expiryFilter]
+  );
 
-  const { data: contractsData, isLoading: loading, error: contractsError } = useGetContractsQuery(queryParams);
+  const {
+    data: contractsData,
+    isLoading: loading,
+    error: contractsError,
+  } = useGetContractsQuery(queryParams);
   const { data: departments = [] } = useGetDepartmentsQuery();
 
   const [createContract] = useCreateContractMutation();
@@ -51,13 +61,26 @@ const Contracts = () => {
 
   const location = useLocation();
 
-  const { data: expiredCountResp } = useGetContractsQuery({ expiry: "expired", page: 1, page_size: 1 });
-  const { data: expiringCountResp } = useGetContractsQuery({ expiry: "expiring", page: 1, page_size: 1 });
-  const expiredCount = typeof expiredCountResp === "object" ? (expiredCountResp?.count ?? 0) : 0;
-  const expiringCount = typeof expiringCountResp === "object" ? (expiringCountResp?.count ?? 0) : 0;
+  const { data: expiredCountResp } = useGetContractsQuery({
+    expiry: "expired",
+    page: 1,
+    page_size: 1,
+  });
+  const { data: expiringCountResp } = useGetContractsQuery({
+    expiry: "expiring",
+    page: 1,
+    page_size: 1,
+  });
+  const expiredCount =
+    typeof expiredCountResp === "object" ? expiredCountResp?.count ?? 0 : 0;
+  const expiringCount =
+    typeof expiringCountResp === "object" ? expiringCountResp?.count ?? 0 : 0;
 
   const contracts = contractsData?.results || contractsData || [];
-  const totalCount = typeof contractsData === "object" && contractsData ? contractsData.count ?? contracts.length : contracts.length;
+  const totalCount =
+    typeof contractsData === "object" && contractsData
+      ? contractsData.count ?? contracts.length
+      : contracts.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const handleChange = (e) => {
@@ -80,9 +103,18 @@ const Contracts = () => {
     const validStep1 = validateStep(1);
     const validStep2 = validateStep(2);
     const validStep3 = validateStep(3);
-    if (!validStep1) { setCurrentStep(1); return; }
-    if (!validStep2) { setCurrentStep(2); return; }
-    if (!validStep3) { setCurrentStep(3); return; }
+    if (!validStep1) {
+      setCurrentStep(1);
+      return;
+    }
+    if (!validStep2) {
+      setCurrentStep(2);
+      return;
+    }
+    if (!validStep3) {
+      setCurrentStep(3);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -222,16 +254,17 @@ const Contracts = () => {
   useEffect(() => {
     // On mount, restore saved view per user
     try {
-      const userStr = localStorage.getItem('user');
-      const uid = userStr ? (JSON.parse(userStr)?.id || 'anon') : 'anon';
+      const userStr = localStorage.getItem("user");
+      const uid = userStr ? JSON.parse(userStr)?.id || "anon" : "anon";
       const savedView = localStorage.getItem(`contracts_view_${uid}`);
       if (savedView) {
         const v = JSON.parse(savedView);
         if (v.expiryFilter) setExpiryFilter(v.expiryFilter);
         if (v.typeFilter) setTypeFilter(v.typeFilter);
-        if (typeof v.pageSize === 'number') setPageSize(v.pageSize);
-        if (typeof v.sortBySoonest === 'boolean') setSortBySoonest(v.sortBySoonest);
-        if (typeof v.searchTerm === 'string') setSearchTerm(v.searchTerm);
+        if (typeof v.pageSize === "number") setPageSize(v.pageSize);
+        if (typeof v.sortBySoonest === "boolean")
+          setSortBySoonest(v.sortBySoonest);
+        if (typeof v.searchTerm === "string") setSearchTerm(v.searchTerm);
       } else {
         // fallback to previous single key
         const saved = localStorage.getItem("contracts_expiry_filter");
@@ -239,7 +272,7 @@ const Contracts = () => {
           setExpiryFilter(saved);
         }
       }
-    } catch { }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -248,12 +281,14 @@ const Contracts = () => {
     if (f === "expired" || f === "expiring") {
       setExpiryFilter(f);
       try {
-        const userStr = localStorage.getItem('user');
-        const uid = userStr ? (JSON.parse(userStr)?.id || 'anon') : 'anon';
-        const v = JSON.parse(localStorage.getItem(`contracts_view_${uid}`) || '{}');
+        const userStr = localStorage.getItem("user");
+        const uid = userStr ? JSON.parse(userStr)?.id || "anon" : "anon";
+        const v = JSON.parse(
+          localStorage.getItem(`contracts_view_${uid}`) || "{}"
+        );
         v.expiryFilter = f;
         localStorage.setItem(`contracts_view_${uid}`, JSON.stringify(v));
-      } catch { }
+      } catch {}
     }
   }, [location?.state]);
 
@@ -261,26 +296,30 @@ const Contracts = () => {
     // Reset to first page when expiry filter changes
     setPage(1);
     try {
-      const userStr = localStorage.getItem('user');
-      const uid = userStr ? (JSON.parse(userStr)?.id || 'anon') : 'anon';
-      const v = JSON.parse(localStorage.getItem(`contracts_view_${uid}`) || '{}');
+      const userStr = localStorage.getItem("user");
+      const uid = userStr ? JSON.parse(userStr)?.id || "anon" : "anon";
+      const v = JSON.parse(
+        localStorage.getItem(`contracts_view_${uid}`) || "{}"
+      );
       v.expiryFilter = expiryFilter;
       localStorage.setItem(`contracts_view_${uid}`, JSON.stringify(v));
-    } catch { }
+    } catch {}
   }, [expiryFilter]);
 
   // Persist other view settings
   useEffect(() => {
     try {
-      const userStr = localStorage.getItem('user');
-      const uid = userStr ? (JSON.parse(userStr)?.id || 'anon') : 'anon';
-      const v = JSON.parse(localStorage.getItem(`contracts_view_${uid}`) || '{}');
+      const userStr = localStorage.getItem("user");
+      const uid = userStr ? JSON.parse(userStr)?.id || "anon" : "anon";
+      const v = JSON.parse(
+        localStorage.getItem(`contracts_view_${uid}`) || "{}"
+      );
       v.typeFilter = typeFilter;
       v.pageSize = pageSize;
       v.sortBySoonest = sortBySoonest;
       v.searchTerm = searchTerm;
       localStorage.setItem(`contracts_view_${uid}`, JSON.stringify(v));
-    } catch { }
+    } catch {}
   }, [typeFilter, pageSize, sortBySoonest, searchTerm]);
 
   const isExpired = (endDate) => {
@@ -312,84 +351,143 @@ const Contracts = () => {
   const exportCsv = async () => {
     try {
       const params = { page: 1, page_size: 10000 };
-      if (expiryFilter !== 'all') params.expiry = expiryFilter;
-      if (typeFilter !== 'all') params.contract_type = typeFilter;
-      const resp = await axiosInstance.get('contracts/', { params });
+      if (expiryFilter !== "all") params.expiry = expiryFilter;
+      if (typeFilter !== "all") params.contract_type = typeFilter;
+      const resp = await axiosInstance.get("contracts/", { params });
       const all = resp.data?.results || resp.data || [];
       // Apply client search filter like UI
       const filtered = all.filter((contract) => {
         const matchesSearch =
-          (contract.contract_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (contract.general_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (contract.content || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesType = typeFilter === 'all' || contract.contract_type === typeFilter;
+          (contract.contract_number || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          (contract.general_number || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          (contract.content || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+        const matchesType =
+          typeFilter === "all" || contract.contract_type === typeFilter;
         return matchesSearch && matchesType;
       });
       // Sort if needed
-      const rows = (expiryFilter !== 'all' || sortBySoonest)
-        ? [...filtered].sort((a, b) => {
-          const da = a.end_date ? new Date(a.end_date).getTime() : Number.MAX_SAFE_INTEGER;
-          const db = b.end_date ? new Date(b.end_date).getTime() : Number.MAX_SAFE_INTEGER;
-          return da - db;
-        })
-        : filtered;
+      const rows =
+        expiryFilter !== "all" || sortBySoonest
+          ? [...filtered].sort((a, b) => {
+              const da = a.end_date
+                ? new Date(a.end_date).getTime()
+                : Number.MAX_SAFE_INTEGER;
+              const db = b.end_date
+                ? new Date(b.end_date).getTime()
+                : Number.MAX_SAFE_INTEGER;
+              return da - db;
+            })
+          : filtered;
       const headers = [
-        'contract_number', 'general_number', 'contract_type', 'date_received', 'end_date', 'archive_date', 'department', 'content', 'progress'
+        "contract_number",
+        "general_number",
+        "contract_type",
+        "date_received",
+        "end_date",
+        "archive_date",
+        "department",
+        "content",
+        "progress",
       ];
       const escapeCsv = (v) => {
-        if (v === null || v === undefined) return '';
+        if (v === null || v === undefined) return "";
         const s = String(v).replace(/"/g, '""');
         return /[",\n]/.test(s) ? `"${s}"` : s;
       };
-      const csv = [headers.join(',')].concat(rows.map(r => [
-        r.contract_number,
-        r.general_number,
-        r.contract_type,
-        r.date_received,
-        r.end_date || '',
-        r.archive_date || '',
-        r.department || '',
-        r.content || '',
-        r.progress || ''
-      ].map(escapeCsv).join(','))).join('\n');
-      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+      const csv = [headers.join(",")]
+        .concat(
+          rows.map((r) =>
+            [
+              r.contract_number,
+              r.general_number,
+              r.contract_type,
+              r.date_received,
+              r.end_date || "",
+              r.archive_date || "",
+              r.department || "",
+              r.content || "",
+              r.progress || "",
+            ]
+              .map(escapeCsv)
+              .join(",")
+          )
+        )
+        .join("\n");
+      const blob = new Blob(["\uFEFF" + csv], {
+        type: "text/csv;charset=utf-8;",
+      });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `contracts_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `contracts_export_${new Date()
+        .toISOString()
+        .slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (e) {
-      console.error('CSV export failed', e);
-      alert('فشل تصدير CSV');
+      console.error("CSV export failed", e);
+      alert("فشل تصدير CSV");
     }
   };
 
   const filteredContracts = contracts.filter((contract) => {
     const term = (searchTerm || "").toLowerCase();
-    const contractNumberStr = String(contract.contract_number ?? "").toLowerCase();
-    const generalNumberStr = String(contract.general_number ?? "").toLowerCase();
+    const nameTerm = (nameFilter || "").toLowerCase();
+    const contractNumberStr = String(
+      contract.contract_number ?? ""
+    ).toLowerCase();
+    const generalNumberStr = String(
+      contract.general_number ?? ""
+    ).toLowerCase();
     const contentStr = String(contract.content ?? "").toLowerCase();
+
     const matchesSearch =
       contractNumberStr.includes(term) ||
       generalNumberStr.includes(term) ||
       contentStr.includes(term);
 
+    const matchesName =
+      !nameTerm ||
+      contractNumberStr.includes(nameTerm) ||
+      generalNumberStr.includes(nameTerm) ||
+      contentStr.includes(nameTerm);
+
     const matchesType =
       typeFilter === "all" || contract.contract_type === typeFilter;
 
-    return matchesSearch && matchesType;
+    // Apply date filter
+    const dateReceived = contract.date_received
+      ? new Date(contract.date_received)
+      : null;
+    const dateFromFilter = dateFrom ? new Date(dateFrom) : null;
+    const dateToFilter = dateTo ? new Date(dateTo) : null;
+
+    const dateMatches =
+      (!dateFromFilter || (dateReceived && dateReceived >= dateFromFilter)) &&
+      (!dateToFilter || (dateReceived && dateReceived <= dateToFilter));
+
+    return matchesSearch && matchesName && matchesType && dateMatches;
   });
 
   // Sort by nearest end date when viewing expiring/expired, or when toggle is on
   const sortedContracts = useMemo(() => {
-    if (expiryFilter === 'all' && !sortBySoonest) return filteredContracts;
+    if (expiryFilter === "all" && !sortBySoonest) return filteredContracts;
     const copy = [...filteredContracts];
     copy.sort((a, b) => {
-      const da = a.end_date ? new Date(a.end_date).getTime() : Number.MAX_SAFE_INTEGER;
-      const db = b.end_date ? new Date(b.end_date).getTime() : Number.MAX_SAFE_INTEGER;
+      const da = a.end_date
+        ? new Date(a.end_date).getTime()
+        : Number.MAX_SAFE_INTEGER;
+      const db = b.end_date
+        ? new Date(b.end_date).getTime()
+        : Number.MAX_SAFE_INTEGER;
       return da - db;
     });
     return copy;
@@ -406,55 +504,65 @@ const Contracts = () => {
         {(user?.role === "President" ||
           user?.role === "GeneralManager" ||
           user?.role === "DepartmentManager") && (
-            <div className="d-flex gap-2">
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  setEditingContract(null);
-                  resetForm();
-                  setCurrentStep(1);
-                  setShowModal(true);
-                }}
-              >
-                <i className="ri-add-circle-line"></i> إضافة عقد جديد
-              </button>
-              <button className="btn btn-outline-secondary" onClick={exportCsv}>
-                <i className="ri-download-2-line"></i> تصدير CSV
-              </button>
-            </div>
-          )}
+          <div className="d-flex gap-2">
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setEditingContract(null);
+                resetForm();
+                setCurrentStep(1);
+                setShowModal(true);
+              }}
+            >
+              <i className="ri-add-circle-line"></i> إضافة عقد جديد
+            </button>
+            <button className="btn btn-outline-secondary" onClick={exportCsv}>
+              <i className="ri-download-2-line"></i> تصدير CSV
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Segmented filter for expiry with counts */}
       <div className="btn-group mb-3" role="group" aria-label="expiry-segment">
         <button
           type="button"
-          className={`btn btn-sm ${expiryFilter === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
-          onClick={() => setExpiryFilter('all')}
+          className={`btn btn-sm ${
+            expiryFilter === "all" ? "btn-primary" : "btn-outline-primary"
+          }`}
+          onClick={() => setExpiryFilter("all")}
         >
           الكل
         </button>
         <button
           type="button"
-          className={`btn btn-sm ${expiryFilter === 'expiring' ? 'btn-primary' : 'btn-outline-primary'}`}
-          onClick={() => setExpiryFilter('expiring')}
+          className={`btn btn-sm ${
+            expiryFilter === "expiring" ? "btn-primary" : "btn-outline-primary"
+          }`}
+          onClick={() => setExpiryFilter("expiring")}
           title="ستنتهي خلال شهرين"
         >
           ستنتهي قريباً ({expiringCount})
         </button>
         <button
           type="button"
-          className={`btn btn-sm ${expiryFilter === 'expired' ? 'btn-primary' : 'btn-outline-primary'}`}
-          onClick={() => setExpiryFilter('expired')}
+          className={`btn btn-sm ${
+            expiryFilter === "expired" ? "btn-primary" : "btn-outline-primary"
+          }`}
+          onClick={() => setExpiryFilter("expired")}
         >
           منتهية ({expiredCount})
         </button>
       </div>
 
       {/* Info banner when a filter is applied or sorting enabled */}
-      {(expiryFilter !== 'all' || sortBySoonest) && (
+      {(expiryFilter !== "all" || sortBySoonest) && (
         <div className="alert alert-info" role="alert">
-          {expiryFilter === 'expired' ? 'تعرض العقود المنتهية فقط.' : expiryFilter === 'expiring' ? 'تعرض العقود التي ستنتهي خلال شهرين.' : 'تم تفعيل فرز الأقرب انتهاء.'}
+          {expiryFilter === "expired"
+            ? "تعرض العقود المنتهية فقط."
+            : expiryFilter === "expiring"
+            ? "تعرض العقود التي ستنتهي خلال شهرين."
+            : "تم تفعيل فرز الأقرب انتهاء."}
         </div>
       )}
 
@@ -480,9 +588,9 @@ const Contracts = () => {
               id="expiredOnly"
               className="form-check-input"
               type="checkbox"
-              checked={expiryFilter === 'expired'}
+              checked={expiryFilter === "expired"}
               onChange={(e) => {
-                setExpiryFilter(e.target.checked ? 'expired' : 'all');
+                setExpiryFilter(e.target.checked ? "expired" : "all");
                 setPage(1);
               }}
             />
@@ -514,19 +622,36 @@ const Contracts = () => {
 
       {(error || contractsError) && (
         <div className="alert alert-danger">
-          {error || contractsError?.data?.detail || contractsError?.error || String(contractsError)}
+          {error ||
+            contractsError?.data?.detail ||
+            contractsError?.error ||
+            String(contractsError)}
         </div>
       )}
 
       <div className="filters">
         <div className="search-box">
-          <i className="ri-search-line"></i>
           <input
             type="text"
             placeholder="بحث في العقود..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+
+          <div className="date-range-filter">
+            <input
+              type="date"
+              placeholder="من التاريخ"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+            <input
+              type="date"
+              placeholder="إلى التاريخ"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
         </div>
 
         <select
@@ -577,14 +702,31 @@ const Contracts = () => {
             const expiring = !expired && isExpiringSoon(contract.end_date);
             const urgent = !expired && isExpiringWithin7(contract.end_date);
             return (
-              <div key={contract.id} className={`contract-card ${expired ? 'expired' : expiring ? 'expiring' : ''} ${urgent ? 'urgent' : ''}`}>
+              <div
+                key={contract.id}
+                className={`contract-card ${
+                  expired ? "expired" : expiring ? "expiring" : ""
+                } ${urgent ? "urgent" : ""}`}
+              >
                 <div className="card-header">
                   <h3>عقد رقم {contract.contract_number}</h3>
                   <div className="badges-right">
-                    {expired && <span className="status-badge expired">منتهي</span>}
-                    {urgent && <span className="status-badge urgent">ينتهي خلال 7 أيام</span>}
-                    {!urgent && expiring && <span className="status-badge expiring">ينتهي قريباً</span>}
-                    <span className="type-badge">{getTypeName(contract.contract_type)}</span>
+                    {expired && (
+                      <span className="status-badge expired">منتهي</span>
+                    )}
+                    {urgent && (
+                      <span className="status-badge urgent">
+                        ينتهي خلال 7 أيام
+                      </span>
+                    )}
+                    {!urgent && expiring && (
+                      <span className="status-badge expiring">
+                        ينتهي قريباً
+                      </span>
+                    )}
+                    <span className="type-badge">
+                      {getTypeName(contract.contract_type)}
+                    </span>
                   </div>
                 </div>
                 <p className="description">{contract.content}</p>
@@ -598,7 +740,9 @@ const Contracts = () => {
                     <span>
                       تاريخ الاستلام:{" "}
                       {contract.date_received
-                        ? new Date(contract.date_received).toLocaleDateString("ar")
+                        ? new Date(contract.date_received).toLocaleDateString(
+                            "ar"
+                          )
                         : "-"}
                     </span>
                   </div>
@@ -616,7 +760,9 @@ const Contracts = () => {
                       <i className="ri-archive-line"></i>
                       <span>
                         تاريخ الحفظ:{" "}
-                        {new Date(contract.archive_date).toLocaleDateString("ar")}
+                        {new Date(contract.archive_date).toLocaleDateString(
+                          "ar"
+                        )}
                       </span>
                     </div>
                   )}
@@ -634,23 +780,23 @@ const Contracts = () => {
                 {(user?.role === "President" ||
                   user?.role === "GeneralManager" ||
                   user?.role === "DepartmentManager") && (
-                    <div className="card-actions">
-                      <button
-                        className="btn btn-sm btn-edit"
-                        onClick={() => handleEdit(contract)}
-                      >
-                        <i className="ri-pencil-line"></i> تعديل
-                      </button>
-                      <button
-                        className="btn btn-sm btn-delete"
-                        onClick={() => handleDelete(contract.id)}
-                      >
-                        <i className="ri-delete-bin-line"></i> حذف
-                      </button>
-                    </div>
-                  )}
+                  <div className="card-actions">
+                    <button
+                      className="btn btn-sm btn-edit"
+                      onClick={() => handleEdit(contract)}
+                    >
+                      <i className="ri-pencil-line"></i> تعديل
+                    </button>
+                    <button
+                      className="btn btn-sm btn-delete"
+                      onClick={() => handleDelete(contract.id)}
+                    >
+                      <i className="ri-delete-bin-line"></i> حذف
+                    </button>
+                  </div>
+                )}
               </div>
-            )
+            );
           })
         )}
       </div>
@@ -660,17 +806,17 @@ const Contracts = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingContract ? "تعديل عقد" : "إضافة عقد جديد"}</h3>
-              <button
-                className="close-btn"
-                onClick={() => setShowModal(false)}
-              >
+              <button className="close-btn" onClick={() => setShowModal(false)}>
                 ×
               </button>
             </div>
             <form onSubmit={handleSubmit} className="contract-form">
               {/* Step indicator */}
               <div className="d-flex mb-3 justify-content-center">
-                <span className="badge bg-primary" style={{ userSelect: 'none' }}>
+                <span
+                  className="badge bg-primary"
+                  style={{ userSelect: "none" }}
+                >
                   خطوه {currentStep}
                 </span>
               </div>
@@ -687,10 +833,14 @@ const Contracts = () => {
                         value={formData.date_received}
                         onChange={handleChange}
                         required
-                        className={fieldErrors.date_received ? "is-invalid" : ""}
+                        className={
+                          fieldErrors.date_received ? "is-invalid" : ""
+                        }
                       />
                       {fieldErrors.date_received && (
-                        <div className="invalid-feedback d-block">{fieldErrors.date_received}</div>
+                        <div className="invalid-feedback d-block">
+                          {fieldErrors.date_received}
+                        </div>
                       )}
                     </div>
 
@@ -702,10 +852,14 @@ const Contracts = () => {
                         value={formData.contract_number}
                         onChange={handleChange}
                         required
-                        className={fieldErrors.contract_number ? "is-invalid" : ""}
+                        className={
+                          fieldErrors.contract_number ? "is-invalid" : ""
+                        }
                       />
                       {fieldErrors.contract_number && (
-                        <div className="invalid-feedback d-block">{fieldErrors.contract_number}</div>
+                        <div className="invalid-feedback d-block">
+                          {fieldErrors.contract_number}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -726,7 +880,9 @@ const Contracts = () => {
                       <option value="protocol">بروتوكول إسناد</option>
                     </select>
                     {fieldErrors.contract_type && (
-                      <div className="invalid-feedback d-block">{fieldErrors.contract_type}</div>
+                      <div className="invalid-feedback d-block">
+                        {fieldErrors.contract_type}
+                      </div>
                     )}
                   </div>
                 </>
@@ -746,7 +902,9 @@ const Contracts = () => {
                       className={fieldErrors.content ? "is-invalid" : ""}
                     ></textarea>
                     {fieldErrors.content && (
-                      <div className="invalid-feedback d-block">{fieldErrors.content}</div>
+                      <div className="invalid-feedback d-block">
+                        {fieldErrors.content}
+                      </div>
                     )}
                   </div>
 
@@ -761,7 +919,9 @@ const Contracts = () => {
                       className={fieldErrors.progress ? "is-invalid" : ""}
                     ></textarea>
                     {fieldErrors.progress && (
-                      <div className="invalid-feedback d-block">{fieldErrors.progress}</div>
+                      <div className="invalid-feedback d-block">
+                        {fieldErrors.progress}
+                      </div>
                     )}
                   </div>
                 </>
@@ -792,7 +952,9 @@ const Contracts = () => {
                         className={fieldErrors.end_date ? "is-invalid" : ""}
                       />
                       {fieldErrors.end_date && (
-                        <div className="invalid-feedback d-block">{fieldErrors.end_date}</div>
+                        <div className="invalid-feedback d-block">
+                          {fieldErrors.end_date}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -814,7 +976,9 @@ const Contracts = () => {
                       ))}
                     </select>
                     {fieldErrors.department && (
-                      <div className="invalid-feedback d-block">{fieldErrors.department}</div>
+                      <div className="invalid-feedback d-block">
+                        {fieldErrors.department}
+                      </div>
                     )}
                   </div>
 
@@ -828,7 +992,9 @@ const Contracts = () => {
                       className={fieldErrors.file ? "is-invalid" : ""}
                     />
                     {fieldErrors.file && (
-                      <div className="invalid-feedback d-block">{fieldErrors.file}</div>
+                      <div className="invalid-feedback d-block">
+                        {fieldErrors.file}
+                      </div>
                     )}
                   </div>
                 </>
@@ -870,10 +1036,22 @@ const Contracts = () => {
                       className="btn btn-primary"
                       disabled={
                         submitting ||
-                        !(formData.date_received && formData.contract_number && formData.contract_type && formData.content && formData.progress && formData.end_date && formData.department)
+                        !(
+                          formData.date_received &&
+                          formData.contract_number &&
+                          formData.contract_type &&
+                          formData.content &&
+                          formData.progress &&
+                          formData.end_date &&
+                          formData.department
+                        )
                       }
                     >
-                      {submitting ? "جارٍ الحفظ..." : (editingContract ? "تحديث" : "إضافة")}
+                      {submitting
+                        ? "جارٍ الحفظ..."
+                        : editingContract
+                        ? "تحديث"
+                        : "إضافة"}
                     </button>
                   )}
                   <button

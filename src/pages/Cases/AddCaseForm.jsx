@@ -12,8 +12,8 @@ const CASE_STATUS_CHOICES = [
 ];
 
 const RULING_CHOICES = [
-  { value: "for_university", label: "لصالح الجامعة" },
-  { value: "against_university", label: "ضد الجامعة" },
+  { value: "لصالح الجامعة", label: "لصالح الجامعة" },
+  { value: "ضد الجامعة", label: "ضد الجامعة" },
 ];
 
 export default function AddCaseForm({ refetchCases }) {
@@ -109,7 +109,12 @@ export default function AddCaseForm({ refetchCases }) {
         [name]: value === "true" ? true : value === "false" ? false : null,
       });
     } else {
-      setFormData({ ...formData, [name]: files ? files[0] : value });
+      // Reset appeal_status when ruling changes to something other than 'against_university'
+      if (name === "ruling" && value !== "against_university") {
+        setFormData({ ...formData, [name]: value, appeal_status: null });
+      } else {
+        setFormData({ ...formData, [name]: files ? files[0] : value });
+      }
     }
   };
 
@@ -326,16 +331,46 @@ export default function AddCaseForm({ refetchCases }) {
           ))}
         </select>
 
-        <label>موقف الدعوى من الطعن</label>
-        <select
-          name="appeal_status"
-          value={formData.appeal_status ?? ""}
-          onChange={handleChange}
-        >
-          <option value="">اختيار...</option>
-          <option value={true}>تم الطعن</option>
-          <option value={false}>لم يتم الطعن</option>
-        </select>
+        {formData.ruling === "against_university" && (
+          <div className="appeal-status-group">
+            <label>موقف الدعوى من الطعن</label>
+            <div className="radio-group">
+              <label className="radio-option">
+                <input
+                  type="radio"
+                  name="appeal_status"
+                  checked={formData.appeal_status === true}
+                  onChange={() =>
+                    setFormData((prev) => ({ ...prev, appeal_status: true }))
+                  }
+                />
+                <span>تم الطعن</span>
+              </label>
+              <label className="radio-option">
+                <input
+                  type="radio"
+                  name="appeal_status"
+                  checked={formData.appeal_status === false}
+                  onChange={() =>
+                    setFormData((prev) => ({ ...prev, appeal_status: false }))
+                  }
+                />
+                <span>لم يتم الطعن</span>
+              </label>
+              <label className="radio-option">
+                <input
+                  type="radio"
+                  name="appeal_status"
+                  checked={formData.appeal_status === null}
+                  onChange={() =>
+                    setFormData((prev) => ({ ...prev, appeal_status: null }))
+                  }
+                />
+                <span>غير محدد</span>
+              </label>
+            </div>
+          </div>
+        )}
 
         <label>حالة القضية *</label>
         <select

@@ -15,6 +15,9 @@ const Fatwas = () => {
   const [currentStep, setCurrentStep] = useState(1); // 1: request, 2: result, 3: department/file
   const [editingFatwa, setEditingFatwa] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [formData, setFormData] = useState({
@@ -28,14 +31,21 @@ const Fatwas = () => {
   const [submitting, setSubmitting] = useState(false);
 
   // RTK Query hooks
-  const { data: fatwasData, isLoading: loading, error: fatwasError } = useGetFatwasQuery({ page, page_size: pageSize });
+  const {
+    data: fatwasData,
+    isLoading: loading,
+    error: fatwasError,
+  } = useGetFatwasQuery({ page, page_size: pageSize });
   const { data: departments = [] } = useGetDepartmentsQuery();
   const [createFatwa] = useCreateFatwaMutation();
   const [updateFatwa] = useUpdateFatwaMutation();
   const [deleteFatwa] = useDeleteFatwaMutation();
 
   const fatwas = fatwasData?.results || fatwasData || [];
-  const totalCount = typeof fatwasData === "object" && fatwasData ? fatwasData.count ?? fatwas.length : fatwas.length;
+  const totalCount =
+    typeof fatwasData === "object" && fatwasData
+      ? fatwasData.count ?? fatwas.length
+      : fatwas.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const handleChange = (e) => {
@@ -59,8 +69,14 @@ const Fatwas = () => {
     const v1 = validateStep(1);
     const v2 = validateStep(2); // optional but run to clear messages
     const v3 = validateStep(3);
-    if (!v1) { setCurrentStep(1); return; }
-    if (!v3) { setCurrentStep(3); return; }
+    if (!v1) {
+      setCurrentStep(1);
+      return;
+    }
+    if (!v3) {
+      setCurrentStep(3);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -163,14 +179,32 @@ const Fatwas = () => {
 
   const filteredFatwas = fatwas.filter((fatwa) => {
     const term = (searchTerm || "").toLowerCase();
+    const nameTerm = (nameFilter || "").toLowerCase();
     const generalNumberStr = String(fatwa.general_number ?? "").toLowerCase();
     const requestContentStr = String(fatwa.request_content ?? "").toLowerCase();
     const resultStr = String(fatwa.result ?? "").toLowerCase();
-    return (
+
+    const matchesSearch =
       generalNumberStr.includes(term) ||
       requestContentStr.includes(term) ||
-      resultStr.includes(term)
-    );
+      resultStr.includes(term);
+
+    const matchesName =
+      !nameTerm ||
+      generalNumberStr.includes(nameTerm) ||
+      requestContentStr.includes(nameTerm) ||
+      resultStr.includes(nameTerm);
+
+    // Apply date filter
+    const dateCreated = fatwa.created_at ? new Date(fatwa.created_at) : null;
+    const dateFromFilter = dateFrom ? new Date(dateFrom) : null;
+    const dateToFilter = dateTo ? new Date(dateTo) : null;
+
+    const dateMatches =
+      (!dateFromFilter || (dateCreated && dateCreated >= dateFromFilter)) &&
+      (!dateToFilter || (dateCreated && dateCreated <= dateToFilter));
+
+    return matchesSearch && matchesName && dateMatches;
   });
 
   if (loading) {
@@ -184,34 +218,51 @@ const Fatwas = () => {
         {(user?.role === "President" ||
           user?.role === "GeneralManager" ||
           user?.role === "DepartmentManager") && (
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                setEditingFatwa(null);
-                resetForm();
-                setCurrentStep(1);
-                setShowModal(true);
-              }}
-            >
-              <i className="ri-add-circle-line"></i> إضافة فتوى جديدة
-            </button>
-          )}
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setEditingFatwa(null);
+              resetForm();
+              setCurrentStep(1);
+              setShowModal(true);
+            }}
+          >
+            <i className="ri-add-circle-line"></i> إضافة فتوى جديدة
+          </button>
+        )}
       </div>
 
       {(error || fatwasError) && (
         <div className="alert alert-danger">
-          {error || fatwasError?.data?.detail || fatwasError?.error || String(fatwasError)}
+          {error ||
+            fatwasError?.data?.detail ||
+            fatwasError?.error ||
+            String(fatwasError)}
         </div>
       )}
 
       <div className="search-box">
-        <i className="ri-search-line"></i>
         <input
           type="text"
           placeholder="بحث في الفتاوى..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+
+        <div className="date-range-filter">
+          <input
+            type="date"
+            placeholder="من التاريخ"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+          <input
+            type="date"
+            placeholder="إلى التاريخ"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="fatwas-list">
@@ -226,7 +277,9 @@ const Fatwas = () => {
               <div className="card-header">
                 <h3>فتوى رقم {fatwa.general_number}</h3>
                 {fatwa.department_name && (
-                  <span className="department-badge">{fatwa.department_name}</span>
+                  <span className="department-badge">
+                    {fatwa.department_name}
+                  </span>
                 )}
               </div>
               <div className="fatwa-content">
@@ -267,21 +320,21 @@ const Fatwas = () => {
               {(user?.role === "President" ||
                 user?.role === "GeneralManager" ||
                 user?.role === "DepartmentManager") && (
-                  <div className="card-actions">
-                    <button
-                      className="btn btn-sm btn-edit"
-                      onClick={() => handleEdit(fatwa)}
-                    >
-                      <i className="ri-pencil-line"></i> تعديل
-                    </button>
-                    <button
-                      className="btn btn-sm btn-delete"
-                      onClick={() => handleDelete(fatwa.id)}
-                    >
-                      <i className="ri-delete-bin-line"></i> حذف
-                    </button>
-                  </div>
-                )}
+                <div className="card-actions">
+                  <button
+                    className="btn btn-sm btn-edit"
+                    onClick={() => handleEdit(fatwa)}
+                  >
+                    <i className="ri-pencil-line"></i> تعديل
+                  </button>
+                  <button
+                    className="btn btn-sm btn-delete"
+                    onClick={() => handleDelete(fatwa.id)}
+                  >
+                    <i className="ri-delete-bin-line"></i> حذف
+                  </button>
+                </div>
+              )}
             </div>
           ))
         )}
@@ -331,17 +384,17 @@ const Fatwas = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingFatwa ? "تعديل فتوى" : "إضافة فتوى جديدة"}</h3>
-              <button
-                className="close-btn"
-                onClick={() => setShowModal(false)}
-              >
+              <button className="close-btn" onClick={() => setShowModal(false)}>
                 ×
               </button>
             </div>
             <form onSubmit={handleSubmit} className="fatwa-form">
               {/* Step indicator */}
               <div className="d-flex mb-3 justify-content-center">
-                <span className="badge bg-primary" style={{ userSelect: 'none' }}>
+                <span
+                  className="badge bg-primary"
+                  style={{ userSelect: "none" }}
+                >
                   خطوه {currentStep}
                 </span>
               </div>
@@ -359,7 +412,9 @@ const Fatwas = () => {
                     className={fieldErrors.request_content ? "is-invalid" : ""}
                   ></textarea>
                   {fieldErrors.request_content && (
-                    <div className="invalid-feedback d-block">{fieldErrors.request_content}</div>
+                    <div className="invalid-feedback d-block">
+                      {fieldErrors.request_content}
+                    </div>
                   )}
                 </div>
               )}
@@ -397,7 +452,9 @@ const Fatwas = () => {
                       ))}
                     </select>
                     {fieldErrors.department && (
-                      <div className="invalid-feedback d-block">{fieldErrors.department}</div>
+                      <div className="invalid-feedback d-block">
+                        {fieldErrors.department}
+                      </div>
                     )}
                   </div>
 
@@ -447,10 +504,15 @@ const Fatwas = () => {
                       type="submit"
                       className="btn btn-primary"
                       disabled={
-                        submitting || !(formData.request_content && formData.department)
+                        submitting ||
+                        !(formData.request_content && formData.department)
                       }
                     >
-                      {submitting ? "جارٍ الحفظ..." : (editingFatwa ? "تحديث" : "إضافة")}
+                      {submitting
+                        ? "جارٍ الحفظ..."
+                        : editingFatwa
+                        ? "تحديث"
+                        : "إضافة"}
                     </button>
                   )}
                   <button

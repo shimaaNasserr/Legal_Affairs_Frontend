@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
 import Login from "../pages/Login/Login";
+import PresidentLogin from "../pages/Login/PresidentLogin";
 import Register from "../pages/Register/Register";
 import ForgotPassword from "../pages/ForgotPassword/ForgotPassword";
 import { Home } from "../pages/Home/Home";
@@ -25,6 +26,10 @@ const route = createBrowserRouter([
     element: <Login />,
   },
   {
+    path: "/president-login",
+    element: <PresidentLogin />,
+  },
+  {
     path: "/register",
     element: <Register />,
   },
@@ -32,7 +37,7 @@ const route = createBrowserRouter([
     path: "/forgot-password",
     element: <ForgotPassword />,
   },
-   {
+  {
     path: "/reset-password/:token",
     element: <ResetPassword />,
   },

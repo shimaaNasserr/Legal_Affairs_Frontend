@@ -1,9 +1,4 @@
-import React, {
-  useState,
-  useContext,
-  useMemo,
-  useEffect,
-} from "react";
+import React, { useState, useContext, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { useGetCasesQuery, useDeleteCaseMutation } from "../../services/api";
@@ -24,6 +19,9 @@ const Cases = () => {
   const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -45,7 +43,7 @@ const Cases = () => {
     data: casesResponse,
     isLoading: loading,
     error,
-    refetch
+    refetch,
   } = useGetCasesQuery(queryParams, {
     refetchOnMountOrArgChange: true,
   });
@@ -63,7 +61,7 @@ const Cases = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, nameFilter, dateFrom, dateTo, statusFilter]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -83,27 +81,30 @@ const Cases = () => {
     }
   };
 
+  const canViewCase = (c) => {
+    if (!user) return false;
+    if (user.role === "Lawyer") return c.created_by === user.id;
+    if (user.role === "Secretary") return true;
+    return ["President", "GeneralManager"].includes(user.role);
+  };
+
   const canEditCase = (c) => {
     if (!user) return false;
-    if (user.role === "Lawyer" && user.department_name === "إدارة القضايا")
-      return c.created_by === user.id;
-    return ["President", "GeneralManager", "DepartmentManager"].includes(
-      user.role
-    );
+    if (user.role === "Lawyer") return c.created_by === user.id;
+    return ["President", "GeneralManager"].includes(user.role);
   };
 
   const canDeleteCase = (c) => {
     if (!user) return false;
-    return ["GeneralManager", "DepartmentManager"].includes(user.role);
+    if (user.role === "Lawyer") return c.created_by === user.id;
+    return ["President", "GeneralManager"].includes(user.role);
   };
 
   const canAddCase = () => {
     if (!user) return false;
-    const deptName = user.department_name || "";
-    if (user.role === "Lawyer" && deptName === "إدارة القضايا") return true;
-    return ["President", "GeneralManager", "DepartmentManager"].includes(
-      user.role
-    );
+    if (user.role === "Lawyer") return true;
+    if (user.role === "Secretary") return true;
+    return ["President", "GeneralManager"].includes(user.role);
   };
 
   if (loading) return <div className="loading">جاري التحميل...</div>;
@@ -125,7 +126,8 @@ const Cases = () => {
 
       {appealNotifications.length > 0 && (
         <div className="alert alert-warning appeal-alert">
-          ⚠ هناك {appealNotifications.length} قضية في هذه الصفحة لم يتم تحديد موقف الطعن لها!
+          ⚠ هناك {appealNotifications.length} قضية في هذه الصفحة لم يتم تحديد
+          موقف الطعن لها!
         </div>
       )}
 
@@ -136,6 +138,21 @@ const Cases = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+
+        <div className="date-range-filter">
+          <input
+            type="date"
+            placeholder="من التاريخ"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+          <input
+            type="date"
+            placeholder="إلى التاريخ"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
 
         <select
           value={statusFilter}
@@ -158,115 +175,166 @@ const Cases = () => {
       </div>
 
       <div className="cases-grid">
-        {cases.length === 0 ? (
+        {cases.filter((caseItem) => {
+          // Apply name filter
+          const nameMatches =
+            !nameFilter ||
+            caseItem.plaintiff
+              .toLowerCase()
+              .includes(nameFilter.toLowerCase()) ||
+            caseItem.defendant.toLowerCase().includes(nameFilter.toLowerCase());
+
+          // Apply date filter
+          const dateReceived = caseItem.date_received
+            ? new Date(caseItem.date_received)
+            : null;
+          const dateFromFilter = dateFrom ? new Date(dateFrom) : null;
+          const dateToFilter = dateTo ? new Date(dateTo) : null;
+
+          const dateMatches =
+            (!dateFromFilter ||
+              (dateReceived && dateReceived >= dateFromFilter)) &&
+            (!dateToFilter || (dateReceived && dateReceived <= dateToFilter));
+
+          return nameMatches && dateMatches;
+        }).length === 0 ? (
           <div className="empty-state">
             <i className="ri-inbox-line"></i>
             <p>لا توجد قضايا</p>
           </div>
         ) : (
-          cases.map((c) => {
-            const hasDivision =
-              c.division_name &&
-              c.division_name.trim() !== "-" &&
-              c.division_name.trim() !== "";
+          cases
+            .filter((caseItem) => {
+              // Apply name filter
+              const nameMatches =
+                !nameFilter ||
+                caseItem.plaintiff
+                  .toLowerCase()
+                  .includes(nameFilter.toLowerCase()) ||
+                caseItem.defendant
+                  .toLowerCase()
+                  .includes(nameFilter.toLowerCase());
 
-            const courtDisplay = hasDivision
-              ? `${c.court_name} - ${c.division_name}`
-              : c.court_name;
+              // Apply date filter
+              const dateReceived = caseItem.date_received
+                ? new Date(caseItem.date_received)
+                : null;
+              const dateFromFilter = dateFrom ? new Date(dateFrom) : null;
+              const dateToFilter = dateTo ? new Date(dateTo) : null;
 
-            return (
-              <div key={c.id} className="case-card">
-                {/* header */}
-                <div className="case-card-header">
-                  <h3>
-                    {c.plaintiff} vs {c.defendant}
-                  </h3>
-                  <span className={`status-badge status-${c.case_status}`}>
-                    {CASE_STATUS_NAMES[c.case_status]}
-                  </span>
-                </div>
+              const dateMatches =
+                (!dateFromFilter ||
+                  (dateReceived && dateReceived >= dateFromFilter)) &&
+                (!dateToFilter ||
+                  (dateReceived && dateReceived <= dateToFilter));
 
-                {/* body */}
-                <div className="case-card-body">
-                  <div>
-                    <strong>رقم القضية:</strong> {c.case_number}
+              return nameMatches && dateMatches;
+            })
+            .map((c) => {
+              const hasDivision =
+                c.division_name &&
+                c.division_name.trim() !== "-" &&
+                c.division_name.trim() !== "";
+
+              const courtDisplay = hasDivision
+                ? `${c.court_name} - ${c.division_name}`
+                : c.court_name;
+
+              return (
+                <div key={c.id} className="case-card">
+                  {/* header */}
+                  <div className="case-card-header">
+                    <h3>
+                      {c.plaintiff} vs {c.defendant}
+                    </h3>
+                    <span className={`status-badge status-${c.case_status}`}>
+                      {CASE_STATUS_NAMES[c.case_status]}
+                    </span>
                   </div>
-                  <div>
-                    <strong>رقم الحصر العام:</strong> {c.general_number}
-                  </div>
-                  <div>
-                    <strong>رقم الدعوى:</strong> {c.lawsuit_number}
-                  </div>
-                  <div>
-                    <strong>المحكمة:</strong> {courtDisplay}
-                  </div>
-                  <div>
-                    <strong>تاريخ ورود الدعوى:</strong> {c.date_received}
-                  </div>
-                  <div>
-                    <strong>موقف الطعن:</strong>
-                    {c.appeal_status === null
-                      ? "غير محدد"
-                      : c.appeal_status === true
+
+                  {/* body */}
+                  <div className="case-card-body">
+                    <div>
+                      <strong>رقم القضية:</strong> {c.case_number}
+                    </div>
+                    <div>
+                      <strong>رقم الحصر العام:</strong> {c.general_number}
+                    </div>
+                    <div>
+                      <strong>رقم الدعوى:</strong> {c.lawsuit_number}
+                    </div>
+                    <div>
+                      <strong>المحكمة:</strong> {courtDisplay}
+                    </div>
+                    <div>
+                      <strong>تاريخ ورود الدعوى:</strong> {c.date_received}
+                    </div>
+                    <div>
+                      <strong>موقف الطعن:</strong>
+                      {c.appeal_status === null
+                        ? "غير محدد"
+                        : c.appeal_status === true
                         ? "تم الطعن"
                         : "لم يتم الطعن"}
+                    </div>
                   </div>
-                </div>
 
-                {/* actions */}
-                <div className="case-card-actions">
-                  <button
-                    className="btn btn-sm btn-view"
-                    onClick={() => navigate(`/cases/${c.id}`)}
-                  >
-                    عرض
-                  </button>
-
-                  {canEditCase(c) && (
-                    <button
-                      className="btn btn-sm btn-edit"
-                      onClick={() => navigate(`/cases/${c.id}/edit`)}
-                    >
-                      تعديل
-                    </button>
-                  )}
-
-                  {canDeleteCase(c) && (
-                    <>
+                  {/* actions */}
+                  <div className="case-card-actions">
+                    {canViewCase(c) && (
                       <button
-                        className="btn btn-sm btn-delete"
-                        onClick={() => setConfirmDeleteId(c.id)}
+                        className="btn btn-sm btn-view"
+                        onClick={() => navigate(`/cases/${c.id}`)}
                       >
-                        حذف
+                        عرض
                       </button>
+                    )}
 
-                      {confirmDeleteId === c.id && (
-                        <div className="confirm-overlay">
-                          <div className="confirm-box">
-                            <p>هل أنت متأكد من حذف هذه القضية؟</p>
-                            <div className="confirm-buttons">
-                              <button
-                                className="btn btn-sm btn-danger"
-                                onClick={() => handleDelete(c.id)}
-                              >
-                                نعم
-                              </button>
-                              <button
-                                className="btn btn-sm btn-secondary"
-                                onClick={() => setConfirmDeleteId(null)}
-                              >
-                                لا
-                              </button>
+                    {canEditCase(c) && (
+                      <button
+                        className="btn btn-sm btn-edit"
+                        onClick={() => navigate(`/cases/${c.id}/edit`)}
+                      >
+                        تعديل
+                      </button>
+                    )}
+
+                    {canDeleteCase(c) && (
+                      <>
+                        <button
+                          className="btn btn-sm btn-delete"
+                          onClick={() => setConfirmDeleteId(c.id)}
+                        >
+                          حذف
+                        </button>
+
+                        {confirmDeleteId === c.id && (
+                          <div className="confirm-overlay">
+                            <div className="confirm-box">
+                              <p>هل أنت متأكد من حذف هذه القضية؟</p>
+                              <div className="confirm-buttons">
+                                <button
+                                  className="btn btn-sm btn-danger"
+                                  onClick={() => handleDelete(c.id)}
+                                >
+                                  نعم
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-secondary"
+                                  onClick={() => setConfirmDeleteId(null)}
+                                >
+                                  لا
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </>
-                  )}
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })
         )}
       </div>
 
@@ -297,8 +365,9 @@ const Cases = () => {
               <button
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
-                className={`pagination-button ${currentPage === pageNum ? "active" : ""
-                  }`}
+                className={`pagination-button ${
+                  currentPage === pageNum ? "active" : ""
+                }`}
               >
                 {pageNum}
               </button>
@@ -312,8 +381,9 @@ const Cases = () => {
           {totalPages > 5 && currentPage < totalPages - 2 && (
             <button
               onClick={() => handlePageChange(totalPages)}
-              className={`pagination-button ${currentPage === totalPages ? "active" : ""
-                }`}
+              className={`pagination-button ${
+                currentPage === totalPages ? "active" : ""
+              }`}
             >
               {totalPages}
             </button>

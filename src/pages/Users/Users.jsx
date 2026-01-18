@@ -9,6 +9,7 @@ import {
   useReactivateUserMutation,
 } from "../../services/api";
 import "./Users.css";
+import axiosInstance from "../../apis/axiosInstance";
 
 const Users = () => {
   const { user: currentUser } = useContext(AuthContext);
@@ -79,10 +80,21 @@ const Users = () => {
       if (editingUser && !submitData.password) delete submitData.password;
 
       if (editingUser) {
-        const updatedUser = await updateUser({
-          id: editingUser.id,
-          formData: submitData,
-        }).unwrap();
+        // Create FormData for proper content type handling
+        const formData = new FormData();
+        Object.keys(submitData).forEach((key) => {
+          if (submitData[key] !== null && submitData[key] !== undefined) {
+            formData.append(key, submitData[key]);
+          }
+        });
+
+        // Use direct API call to handle FormData properly
+        // Don't set Content-Type header as it's automatically set by browser for FormData
+        const response = await axiosInstance.put(
+          `accounts/users/${editingUser.id}/`,
+          formData
+        );
+        const updatedUser = response.data;
 
         // Update local state
         setLocalUsers((prev) =>
@@ -91,6 +103,9 @@ const Users = () => {
           )
         );
         setSuccess("تم تحديث المستخدم بنجاح");
+
+        // Refetch users to ensure cache is up-to-date
+        refetch();
       } else {
         const newUser = await addUser(submitData).unwrap();
         setLocalUsers((prev) => [...prev, newUser]);
@@ -345,7 +360,8 @@ const Users = () => {
                         {daysLeft !== null ? `${daysLeft} يوم` : "غير معروف"}
                       </td>
                       <td>
-                        {currentUser?.role === "President" && (
+                        {(currentUser?.role === "President" ||
+                          currentUser?.role === "GeneralManager") && (
                           <button
                             className="btn btn-sm btn-success"
                             onClick={() => handleReactivate(user.id)}

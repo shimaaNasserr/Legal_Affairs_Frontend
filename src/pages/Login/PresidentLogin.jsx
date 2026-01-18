@@ -4,7 +4,7 @@ import axiosInstance from "../../apis/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
 import "./Login.css";
 
-export default function Login() {
+export default function PresidentLogin() {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -28,6 +28,14 @@ export default function Login() {
 
     try {
       const res = await axiosInstance.post("accounts/login/", formData);
+
+      // Check if user is President or General Manager
+      const userRole = res.data.user?.role;
+      if (userRole !== "President" && userRole !== "GeneralManager") {
+        setError("عذراً، هذا النموذج مخصص فقط لرئيس الجامعة أو المدير العام");
+        return;
+      }
+
       login(res.data.access, res.data.user);
       navigate("/");
       localStorage.setItem("user", JSON.stringify(res.data.user));
@@ -47,10 +55,9 @@ export default function Login() {
           <div className="login-image-icon">
             <i className="ri-scales-3-fill"></i>
           </div>
-          <h1>إدارة الشؤون القانونية</h1>
+          <h1>نظام إدارة الشؤون القانونية</h1>
           <p>
-            نظام شامل ومتكامل لإدارة القضايا والتحقيقات والتظلمات والعقود
-            والفتاوى
+            دخول خاص برئيس الجامعة والمدير العام
             <br />
             جامعة بورسعيد
           </p>
@@ -66,7 +73,7 @@ export default function Login() {
           </div>
 
           <div className="login-header">
-            <h2>مرحباً بعودتك!</h2>
+            <h2>مرحباً بكم</h2>
             <p>يرجى إدخال بياناتك للدخول إلى النظام</p>
           </div>
 
@@ -143,10 +150,8 @@ export default function Login() {
               <Link to="/forgot-password">نسيت كلمة المرور؟</Link>
             </div>
 
-            <div className="president-login-link">
-              <Link to="/president-login">
-                هل أنت رئيس الجامعة أو المدير العام؟ اضغط هنا لتسجيل الدخول
-              </Link>
+            <div className="back-to-general-login">
+              <Link to="/login">العودة إلى نموذج تسجيل الدخول العام</Link>
             </div>
 
             <button type="submit" className="login-btn" disabled={loading}>
