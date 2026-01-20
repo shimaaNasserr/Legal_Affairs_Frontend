@@ -217,8 +217,8 @@ const Users = () => {
     return roleNames[role] || role;
   };
 
-  const activeUsers = localUsers.filter((u) => !u.is_deactivated);
-  const inactiveUsers = localUsers.filter((u) => u.is_deactivated);
+  const activeUsers = localUsers.filter((u) => !u.is_deactivated && u.id !== currentUser?.id);
+  const inactiveUsers = localUsers.filter((u) => u.is_deactivated && u.id !== currentUser?.id);
 
   if (isLoading) return <div>جاري التحميل...</div>;
 

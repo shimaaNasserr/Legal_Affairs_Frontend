@@ -235,6 +235,7 @@
   display: flex;
   gap: 2rem;
   margin-top: 0.5rem;
+  justify-content: space-between;
 }
 
 .case-form .radio-group input[type="radio"] {
@@ -377,8 +378,7 @@
   font-size: 1.1rem;
 }
 
-/* Modern Radio Group */
-.case-form .radio-group {
+Modern Radio Group .case-form .radio-group {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -412,6 +412,8 @@
   display: inline-block;
   transition: all 0.25s ease;
   background: white;
+  margin-left: 0.5rem;
+  transform: translateY(5px);
 }
 
 /* عند التحديد */
@@ -424,7 +426,6 @@
 /* Hover على العنصر */
 .case-form .radio-group label:hover span::before {
   border-color: var(--secondary-color);
-  transform: scale(1.1);
 }
 
 .modal-actions {
@@ -1000,7 +1001,7 @@ select.input-error {
 }
 
 .radio-group {
-  display: flex;
+  display: grid;
   gap: 2rem;
   margin-top: 0.5rem;
   flex-wrap: wrap;

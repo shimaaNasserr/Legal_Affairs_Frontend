@@ -92,11 +92,7 @@ export const getRoleBasedLinks = (userRole) => {
   }
   // سكرتير: قضايا و تحقيقات و تظلمات
   else if (userRole === ROLES.SECRETARY) {
-    links.push(
-      { to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" },
-      { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
-      { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" }
-    );
+    links.push({ to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" });
   }
 
   return links;

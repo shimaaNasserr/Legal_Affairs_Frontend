@@ -20,8 +20,8 @@ const Sidebar = () => {
   const getRoleLinks = () => {
     const links = [...commonLinks];
 
-    // رئيس الجامعة ومدير عام: جميع الصفحات
-    if (role === ROLES.PRESIDENT || role === ROLES.GENERAL_MANAGER) {
+    // رئيس الجامعة: جميع الصفحات بما في ذلك الإحصائيات
+    if (role === ROLES.PRESIDENT) {
       links.push(
         { to: "/users", icon: "ri-team-line", label: "إدارة المستخدمين" },
         { to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" },
@@ -36,6 +36,17 @@ const Sidebar = () => {
         }
       );
     }
+    // مدير عام: جميع الصفحات ما عدا الإحصائيات
+    else if (role === ROLES.GENERAL_MANAGER) {
+      links.push(
+        { to: "/users", icon: "ri-team-line", label: "إدارة المستخدمين" },
+        { to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" },
+        { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
+        { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" },
+        { to: "/contracts", icon: "ri-file-text-line", label: "العقود" },
+        { to: "/fatwas", icon: "ri-book-open-line", label: "الفتاوى" }
+      );
+    }
     // مدير إدارة: قضايا و تحقيقات و تظلمات إدارته فقط
     else if (role === ROLES.DEPARTMENT_MANAGER) {
       links.push(
@@ -46,18 +57,16 @@ const Sidebar = () => {
         { to: "/fatwas", icon: "ri-book-open-line", label: "الفتاوى" }
       );
     }
-    // محامي: قضاياه فقط
+    // محامي: الصفحة الرئيسية والقضايا فقط
     else if (role === ROLES.LAWYER) {
       links.push(
         { to: "/cases", icon: "ri-file-list-3-line", label: "قضايا" }
       );
     }
-    // سكرتير: قضايا و تحقيقات و تظلمات
+    // سكرتير: الصفحة الرئيسية والقضايا فقط
     else if (role === ROLES.SECRETARY) {
       links.push(
-        { to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" },
-        { to: "/investigations", icon: "ri-search-line", label: "التحقيقات" },
-        { to: "/appeals", icon: "ri-alert-line", label: "التظلمات" }
+        { to: "/cases", icon: "ri-file-list-3-line", label: "القضايا" }
       );
     }
 

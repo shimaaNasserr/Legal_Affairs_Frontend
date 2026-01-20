@@ -28,6 +28,16 @@ export default function Login() {
 
     try {
       const res = await axiosInstance.post("accounts/login/", formData);
+
+      // Check if user is President or General Manager
+      const userRole = res.data.user?.role;
+      if (userRole === "President" || userRole === "GeneralManager") {
+        setError(
+          "عذراً، يجب عليك استخدام نموذج تسجيل الدخول الخاص بالرئيس أو المدير العام"
+        );
+        return;
+      }
+
       login(res.data.access, res.data.user);
       navigate("/");
       localStorage.setItem("user", JSON.stringify(res.data.user));
@@ -143,7 +153,10 @@ export default function Login() {
               <Link to="/forgot-password">نسيت كلمة المرور؟</Link>
             </div>
 
-            <div className="president-login-link">
+            <div
+              className="president-login-link"
+              style={{ marginBottom: "1rem" }}
+            >
               <Link to="/president-login">
                 هل أنت رئيس الجامعة أو المدير العام؟ اضغط هنا لتسجيل الدخول
               </Link>

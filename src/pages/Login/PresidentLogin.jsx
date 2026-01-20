@@ -150,7 +150,10 @@ export default function PresidentLogin() {
               <Link to="/forgot-password">نسيت كلمة المرور؟</Link>
             </div>
 
-            <div className="back-to-general-login">
+            <div
+              className="back-to-general-login"
+              style={{ marginBottom: "1rem" }}
+            >
               <Link to="/login">العودة إلى نموذج تسجيل الدخول العام</Link>
             </div>
 

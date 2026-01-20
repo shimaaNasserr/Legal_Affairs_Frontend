@@ -301,6 +301,7 @@ export default function AddCaseForm({ refetchCases }) {
               name="hearing_dates"
               value={date}
               onChange={(e) => handleChange(e, idx)}
+              style={{ marginBottom: "0" }}
             />
             <button
               type="button"
@@ -331,7 +332,7 @@ export default function AddCaseForm({ refetchCases }) {
           ))}
         </select>
 
-        {formData.ruling === "against_university" && (
+        {formData.ruling === "ضد الجامعة" && (
           <div className="appeal-status-group">
             <label>موقف الدعوى من الطعن</label>
             <div className="radio-group">
