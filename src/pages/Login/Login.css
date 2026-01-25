@@ -11,33 +11,45 @@
 .login-image-section {
   flex: 1;
   position: relative;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--primary-dark) 100%
+  );
   display: none;
   overflow: hidden;
   height: 100vh;
 }
 
 .login-image-section::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(30, 58, 95, 0.85) 0%, rgba(21, 45, 71, 0.75) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(30, 58, 95, 0.85) 0%,
+    rgba(21, 45, 71, 0.75) 100%
+  );
   z-index: 1;
 }
 
 .login-image-section::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
-    linear-gradient(135deg, rgba(30, 58, 95, 0.4) 0%, rgba(21, 45, 71, 0.5) 100%),
-    url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1200&q=80') center/cover;
+  background: linear-gradient(
+      135deg,
+      rgba(30, 58, 95, 0.4) 0%,
+      rgba(21, 45, 71, 0.5) 100%
+    ),
+    url("https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1200&q=80")
+      center/cover;
   z-index: 0;
   animation: subtleZoom 20s ease-in-out infinite alternate;
 }
@@ -93,7 +105,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 3rem;
+  padding: 1rem 3rem;
   background: #ffffff;
   overflow-y: auto;
   max-height: 100vh;
@@ -101,13 +113,18 @@
 }
 
 .login-form-section::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   right: 0;
   width: 1px;
   height: 100%;
-  background: linear-gradient(180deg, transparent 0%, var(--bg-tertiary) 50%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--bg-tertiary) 50%,
+    transparent 100%
+  );
 }
 
 .login-container {
@@ -346,7 +363,7 @@
 }
 
 .login-btn::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -365,7 +382,8 @@
 
 .login-btn:hover:not(:disabled) {
   background: var(--primary-dark);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .login-btn:active:not(:disabled) {
@@ -421,7 +439,7 @@
 
 .divider::before,
 .divider::after {
-  content: '';
+  content: "";
   flex: 1;
   border-bottom: 1px solid var(--bg-tertiary);
 }
@@ -441,16 +459,16 @@
   .login-page {
     flex-direction: column;
   }
-  
+
   .login-form-section {
     padding: 1.5rem 1.25rem;
     max-height: none;
   }
-  
+
   .login-header h2 {
     font-size: 1.5rem;
   }
-  
+
   .university-logo img {
     max-height: 60px;
   }
@@ -460,28 +478,28 @@
   .login-container {
     max-width: 100%;
   }
-  
+
   .login-header h2 {
     font-size: 1.375rem;
   }
-  
+
   .login-header p {
     font-size: 0.8125rem;
   }
-  
+
   .university-logo {
     margin-bottom: 1rem;
     padding-bottom: 1rem;
   }
-  
+
   .university-logo img {
     max-height: 50px;
   }
-  
+
   .form-group {
     margin-bottom: 1rem;
   }
-  
+
   .forgot-password {
     margin-bottom: 1rem;
   }

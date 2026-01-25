@@ -378,14 +378,29 @@ const Appeals = () => {
                   </span>
                 )}
                 {appeal.file && (
-                  <a
-                    href={appeal.file}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="file-link"
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary file-link"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(appeal.file);
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = `appeal-${appeal.id}.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                      } catch (error) {
+                        console.error("Error downloading file:", error);
+                        alert("حدث خطأ أثناء تحميل الملف");
+                      }
+                    }}
                   >
-                    <i className="ri-file-pdf-line"></i> عرض الملف
-                  </a>
+                    <i className="ri-file-pdf-line"></i> تحميل الملف
+                  </button>
                 )}
               </div>
               {canModifyData(user) && (

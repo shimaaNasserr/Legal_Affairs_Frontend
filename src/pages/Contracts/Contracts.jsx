@@ -37,6 +37,8 @@ const Contracts = () => {
   });
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const queryParams = useMemo(
@@ -143,7 +145,59 @@ const Contracts = () => {
     } catch (err) {
       console.error("Error saving contract:", err);
       const data = err?.data;
-      const apiDetail = data?.detail || data?.message;
+
+      // Extract and display the specific error message from the backend
+      let errorMessage = "فشل في حفظ العقد";
+
+      if (data) {
+        // Handle different types of error responses
+        if (typeof data === "string") {
+          errorMessage = data;
+        } else if (typeof data === "object") {
+          // Look for common error field names
+          if (data.detail) {
+            errorMessage = data.detail;
+          } else if (data.message) {
+            errorMessage = data.message;
+          } else {
+            // Handle validation errors where each field has an array of messages
+            const allErrors = [];
+            for (const [field, messages] of Object.entries(data)) {
+              if (field !== "detail" && field !== "message") {
+                // Skip detail/message since we already handled them
+                if (Array.isArray(messages)) {
+                  allErrors.push(...messages);
+                } else {
+                  allErrors.push(messages);
+                }
+              }
+            }
+            // Join all error messages with a separator
+            if (allErrors.length > 0) {
+              errorMessage = allErrors.join(" ");
+            }
+
+            // If no specific field errors were found, fall back to extracting first error
+            if (
+              errorMessage === "فشل في حفظ العقد" &&
+              Object.keys(data).length > 0
+            ) {
+              const firstError = Object.values(data)[0];
+              if (Array.isArray(firstError)) {
+                errorMessage = firstError[0];
+              } else {
+                errorMessage = firstError || errorMessage;
+              }
+            }
+          }
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+
+      // Also handle field-specific errors
       if (data && typeof data === "object" && !Array.isArray(data)) {
         const fe = {};
         Object.entries(data).forEach(([k, v]) => {
@@ -152,7 +206,6 @@ const Contracts = () => {
         });
         if (Object.keys(fe).length) setFieldErrors(fe);
       }
-      setError(apiDetail || "فشل في حفظ العقد");
     } finally {
       setSubmitting(false);
     }
@@ -176,13 +229,57 @@ const Contracts = () => {
   };
 
   const handleDelete = async (contractId) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذا العقد؟")) return;
-
     try {
+      setDeletingId(contractId);
       await deleteContract(contractId).unwrap();
+      setConfirmDeleteId(null);
+      setDeletingId(null);
     } catch (err) {
       console.error("Error deleting contract:", err);
-      setError("فشل في حذف العقد");
+      setDeletingId(null);
+
+      // Extract and display the specific error message from the backend
+      let errorMessage = "فشل في حذف العقد";
+
+      if (err.data) {
+        // Handle different types of error responses
+        if (typeof err.data === "string") {
+          errorMessage = err.data;
+        } else if (typeof err.data === "object") {
+          // Look for common error field names
+          if (err.data.detail) {
+            errorMessage = err.data.detail;
+          } else if (err.data.message) {
+            errorMessage = err.data.message;
+          } else {
+            // Handle validation errors where each field has an array of messages
+            const allErrors = [];
+            for (const [field, messages] of Object.entries(err.data)) {
+              if (Array.isArray(messages)) {
+                allErrors.push(...messages);
+              } else {
+                allErrors.push(messages);
+              }
+            }
+            // Join all error messages with a separator
+            errorMessage = allErrors.join(" "); // Use space to join multiple messages
+
+            // If no specific field errors were found, fall back to extracting first error
+            if (!allErrors.length) {
+              const firstError = Object.values(err.data)[0];
+              if (Array.isArray(firstError)) {
+                errorMessage = firstError[0];
+              } else {
+                errorMessage = firstError || errorMessage;
+              }
+            }
+          }
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
     }
   };
 
@@ -654,27 +751,6 @@ const Contracts = () => {
           </div>
         </div>
 
-        <div className="d-flex align-items-end gap-2">
-          <div>
-            <label className="form-label">من</label>
-            <input
-              className="form-control"
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="form-label">إلى</label>
-            <input
-              className="form-control"
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </div>
-        </div>
-
         <select
           className="filter-select"
           value={typeFilter}
@@ -788,14 +864,29 @@ const Contracts = () => {
                     </div>
                   )}
                   {contract.file && (
-                    <a
-                      href={contract.file}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="file-link"
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary file-link"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(contract.file);
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const link = document.createElement("a");
+                          link.href = url;
+                          link.download = `contract-${contract.id}.pdf`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          window.URL.revokeObjectURL(url);
+                        } catch (error) {
+                          console.error("Error downloading file:", error);
+                          alert("حدث خطأ أثناء تحميل الملف");
+                        }
+                      }}
                     >
-                      <i className="ri-file-pdf-line"></i> عرض الملف
-                    </a>
+                      <i className="ri-file-pdf-line"></i> تحميل الملف
+                    </button>
                   )}
                 </div>
                 {(user?.role === "President" ||
@@ -810,9 +901,22 @@ const Contracts = () => {
                     </button>
                     <button
                       className="btn btn-sm btn-delete"
-                      onClick={() => handleDelete(contract.id)}
+                      onClick={() => setConfirmDeleteId(contract.id)}
+                      disabled={deletingId === contract.id}
                     >
-                      <i className="ri-delete-bin-line"></i> حذف
+                      {deletingId === contract.id ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            role="status"
+                          />{" "}
+                          جاري الحذف...
+                        </>
+                      ) : (
+                        <>
+                          <i className="ri-delete-bin-line"></i> حذف
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
@@ -1085,6 +1189,44 @@ const Contracts = () => {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {confirmDeleteId && (
+        <div
+          className="confirm-overlay"
+          onClick={() => setConfirmDeleteId(null)}
+        >
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <p>هل أنت متأكد من حذف هذا العقد؟</p>
+            <div className="confirm-buttons">
+              <button
+                className="btn btn-sm btn-danger"
+                onClick={() => handleDelete(confirmDeleteId)}
+                disabled={deletingId === confirmDeleteId}
+              >
+                {deletingId === confirmDeleteId ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                    />{" "}
+                    جاري الحذف...
+                  </>
+                ) : (
+                  "نعم"
+                )}
+              </button>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={deletingId === confirmDeleteId}
+              >
+                لا
+              </button>
+            </div>
           </div>
         </div>
       )}

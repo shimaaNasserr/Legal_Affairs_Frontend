@@ -1,7 +1,11 @@
 import React, { useState, useContext, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
-import { useGetCasesQuery, useDeleteCaseMutation } from "../../services/api";
+import {
+  useGetCasesQuery,
+  useDeleteCaseMutation,
+  useGetDepartmentsQuery,
+} from "../../services/api";
 import "./Cases.css";
 
 const ITEMS_PER_PAGE = 8;
@@ -18,12 +22,47 @@ const Cases = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  // Fetch departments to check if lawyer is in 'القضايا' department
+  const { data: departmentsData } = useGetDepartmentsQuery();
+  const departments = useMemo(() => {
+    if (departmentsData?.results) {
+      return departmentsData.results;
+    } else if (Array.isArray(departmentsData)) {
+      return departmentsData;
+    }
+    return [];
+  }, [departmentsData]);
+
+  // Check if the user is in the 'القضايا' department
+  const isInQadaDepartment = useMemo(() => {
+    if (!user || user.role !== "Lawyer" || !user.department) return false;
+
+    // If departments haven't loaded yet, return false
+    if (!departments || departments.length === 0) {
+      return false;
+    }
+
+    // Find the department by matching the user's department ID
+    const userDept = departments.find((dept) => dept.id === user.department);
+
+    if (!userDept || !userDept.name) {
+      return false;
+    }
+
+    // Check if the user's department name is 'القضايا' or contains 'قض'
+    const deptName = userDept.name.toLowerCase().trim();
+    return (
+      deptName === "القضايا" || deptName === "قضايا" || deptName.includes("قض")
+    );
+  }, [user, departments]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   // RTK Query Params
@@ -85,26 +124,31 @@ const Cases = () => {
 
   const canViewCase = (c) => {
     if (!user) return false;
-    if (user.role === "Lawyer") return c.created_by === user.id;
+    if (user.role === "Lawyer") return c.created_by === user.id; // Lawyers can only view cases they created
     if (user.role === "Secretary") return true;
     return ["President", "GeneralManager"].includes(user.role);
   };
 
   const canEditCase = (c) => {
     if (!user) return false;
-    if (user.role === "Lawyer") return c.created_by === user.id;
+    // Only President and General Manager can edit cases
+    // Lawyers in 'القضايا' department cannot edit any cases
     return ["President", "GeneralManager"].includes(user.role);
   };
 
   const canDeleteCase = (c) => {
     if (!user) return false;
-    if (user.role === "Lawyer") return c.created_by === user.id;
+    // Only President and General Manager can delete cases
+    // Lawyers in 'القضايا' department cannot delete any cases
     return ["President", "GeneralManager"].includes(user.role);
   };
 
   const canAddCase = () => {
     if (!user) return false;
-    if (user.role === "Lawyer") return true;
+    if (user.role === "Lawyer") {
+      // Only lawyers in 'القضايا' department can add cases
+      return isInQadaDepartment;
+    }
     if (user.role === "Secretary") return true;
     return ["President", "GeneralManager"].includes(user.role);
   };
@@ -136,7 +180,7 @@ const Cases = () => {
       <div className="filters">
         <input
           type="text"
-          placeholder="بحث بالاسم أو الرقم..."
+          placeholder="بحث بالاسم..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -180,11 +224,15 @@ const Cases = () => {
         {cases.filter((caseItem) => {
           // Apply name filter
           const nameMatches =
-            !nameFilter ||
+            !searchTerm ||
             caseItem.plaintiff
               .toLowerCase()
-              .includes(nameFilter.toLowerCase()) ||
-            caseItem.defendant.toLowerCase().includes(nameFilter.toLowerCase());
+              .includes(searchTerm.toLowerCase()) ||
+            caseItem.defendant.toLowerCase().includes(searchTerm.toLowerCase());
+
+          // Apply status filter
+          const statusMatches =
+            statusFilter === "all" || caseItem.case_status === statusFilter;
 
           // Apply date filter
           const dateReceived = caseItem.date_received
@@ -198,7 +246,7 @@ const Cases = () => {
               (dateReceived && dateReceived >= dateFromFilter)) &&
             (!dateToFilter || (dateReceived && dateReceived <= dateToFilter));
 
-          return nameMatches && dateMatches;
+          return nameMatches && statusMatches && dateMatches;
         }).length === 0 ? (
           <div className="empty-state">
             <i className="ri-inbox-line"></i>
@@ -209,13 +257,17 @@ const Cases = () => {
             .filter((caseItem) => {
               // Apply name filter
               const nameMatches =
-                !nameFilter ||
+                !searchTerm ||
                 caseItem.plaintiff
                   .toLowerCase()
-                  .includes(nameFilter.toLowerCase()) ||
+                  .includes(searchTerm.toLowerCase()) ||
                 caseItem.defendant
                   .toLowerCase()
-                  .includes(nameFilter.toLowerCase());
+                  .includes(searchTerm.toLowerCase());
+
+              // Apply status filter
+              const statusMatches =
+                statusFilter === "all" || caseItem.case_status === statusFilter;
 
               // Apply date filter
               const dateReceived = caseItem.date_received
@@ -230,7 +282,7 @@ const Cases = () => {
                 (!dateToFilter ||
                   (dateReceived && dateReceived <= dateToFilter));
 
-              return nameMatches && dateMatches;
+              return nameMatches && statusMatches && dateMatches;
             })
             .map((c) => {
               const hasDivision =
@@ -302,36 +354,12 @@ const Cases = () => {
                     )}
 
                     {canDeleteCase(c) && (
-                      <>
-                        <button
-                          className="btn btn-sm btn-delete"
-                          onClick={() => setConfirmDeleteId(c.id)}
-                        >
-                          حذف
-                        </button>
-
-                        {confirmDeleteId === c.id && (
-                          <div className="confirm-overlay">
-                            <div className="confirm-box">
-                              <p>هل أنت متأكد من حذف هذه القضية؟</p>
-                              <div className="confirm-buttons">
-                                <button
-                                  className="btn btn-sm btn-danger"
-                                  onClick={() => handleDelete(c.id)}
-                                >
-                                  نعم
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-secondary"
-                                  onClick={() => setConfirmDeleteId(null)}
-                                >
-                                  لا
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </>
+                      <button
+                        className="btn btn-sm btn-delete"
+                        onClick={() => setConfirmDeleteId(c.id)}
+                      >
+                        حذف
+                      </button>
                     )}
                   </div>
                 </div>
@@ -339,6 +367,44 @@ const Cases = () => {
             })
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {confirmDeleteId && (
+        <div
+          className="confirm-overlay"
+          onClick={() => setConfirmDeleteId(null)}
+        >
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <p>هل أنت متأكد من حذف هذه القضية؟</p>
+            <div className="confirm-buttons">
+              <button
+                className="btn btn-sm btn-danger"
+                onClick={() => handleDelete(confirmDeleteId)}
+                disabled={deletingId === confirmDeleteId}
+              >
+                {deletingId === confirmDeleteId ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                    />{" "}
+                    جاري الحذف...
+                  </>
+                ) : (
+                  "نعم"
+                )}
+              </button>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={deletingId === confirmDeleteId}
+              >
+                لا
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {totalPages > 1 && (
         <div className="pagination">

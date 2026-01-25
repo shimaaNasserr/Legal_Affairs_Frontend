@@ -12,8 +12,8 @@ const CASE_STATUS_CHOICES = [
 ];
 
 const RULING_CHOICES = [
-  { value: "لصالح الجامعة", label: "لصالح الجامعة" },
-  { value: "ضد الجامعة", label: "ضد الجامعة" },
+  { value: "for_university", label: "لصالح الجامعة" },
+  { value: "against_university", label: "ضد الجامعة" },
 ];
 
 export default function AddCaseForm({ refetchCases }) {
@@ -332,7 +332,7 @@ export default function AddCaseForm({ refetchCases }) {
           ))}
         </select>
 
-        {formData.ruling === "ضد الجامعة" && (
+        {formData.ruling === "against_university" && (
           <div className="appeal-status-group">
             <label>موقف الدعوى من الطعن</label>
             <div className="radio-group">

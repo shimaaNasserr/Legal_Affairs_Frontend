@@ -10,11 +10,15 @@ import {
 } from "../../services/api";
 import "./Users.css";
 import axiosInstance from "../../apis/axiosInstance";
+import Modal from "../../components/common/Modal";
 
 const Users = () => {
   const { user: currentUser } = useContext(AuthContext);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState("");
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -165,37 +169,43 @@ const Users = () => {
   };
 
   const handleDeactivate = async (userId) => {
-    if (!window.confirm("هل أنت متأكد من تعطيل هذا المستخدم؟")) return;
-    try {
-      await deactivateUser(userId).unwrap();
-      setSuccess("تم تعطيل المستخدم بنجاح");
-      // Update local state immediately
-      setLocalUsers((prev) =>
-        prev.map((user) =>
-          user.id === userId ? { ...user, is_deactivated: true } : user
-        )
-      );
-    } catch (err) {
-      setError(err.data?.detail || "فشل في تعطيل المستخدم");
-      console.error(err);
-    }
+    setConfirmMessage("هل أنت متأكد من تعطيل هذا المستخدم؟");
+    setConfirmAction(() => async () => {
+      try {
+        await deactivateUser(userId).unwrap();
+        setSuccess("تم تعطيل المستخدم بنجاح");
+        // Update local state immediately
+        setLocalUsers((prev) =>
+          prev.map((user) =>
+            user.id === userId ? { ...user, is_deactivated: true } : user
+          )
+        );
+      } catch (err) {
+        setError(err.data?.detail || "فشل في تعطيل المستخدم");
+        console.error(err);
+      }
+    });
+    setShowConfirmModal(true);
   };
 
   const handleReactivate = async (userId) => {
-    if (!window.confirm("هل أنت متأكد من إعادة تفعيل هذا المستخدم؟")) return;
-    try {
-      await reactivateUser(userId).unwrap();
-      setSuccess("تم إعادة تفعيل المستخدم بنجاح");
-      // Update local state immediately
-      setLocalUsers((prev) =>
-        prev.map((user) =>
-          user.id === userId ? { ...user, is_deactivated: false } : user
-        )
-      );
-    } catch (err) {
-      setError(err.data?.detail || "فشل في إعادة تفعيل المستخدم");
-      console.error(err);
-    }
+    setConfirmMessage("هل أنت متأكد من إعادة تفعيل هذا المستخدم؟");
+    setConfirmAction(() => async () => {
+      try {
+        await reactivateUser(userId).unwrap();
+        setSuccess("تم إعادة تفعيل المستخدم بنجاح");
+        // Update local state immediately
+        setLocalUsers((prev) =>
+          prev.map((user) =>
+            user.id === userId ? { ...user, is_deactivated: false } : user
+          )
+        );
+      } catch (err) {
+        setError(err.data?.detail || "فشل في إعادة تفعيل المستخدم");
+        console.error(err);
+      }
+    });
+    setShowConfirmModal(true);
   };
 
   const getDaysRemaining = (deactivatedAt) => {
@@ -217,8 +227,12 @@ const Users = () => {
     return roleNames[role] || role;
   };
 
-  const activeUsers = localUsers.filter((u) => !u.is_deactivated && u.id !== currentUser?.id);
-  const inactiveUsers = localUsers.filter((u) => u.is_deactivated && u.id !== currentUser?.id);
+  const activeUsers = localUsers.filter(
+    (u) => !u.is_deactivated && u.id !== currentUser?.id
+  );
+  const inactiveUsers = localUsers.filter(
+    (u) => u.is_deactivated && u.id !== currentUser?.id
+  );
 
   if (isLoading) return <div>جاري التحميل...</div>;
 
@@ -245,6 +259,55 @@ const Users = () => {
         </div>
       )}
       {success && <div className="alert alert-success">{success}</div>}
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowConfirmModal(false)}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>تأكيد</h3>
+              <button
+                className="close-btn"
+                onClick={() => setShowConfirmModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="confirmation-content">
+              <p>{confirmMessage}</p>
+              <div
+                className="modal-actions"
+                style={{
+                  marginTop: "1.5rem",
+                  display: "flex",
+                  gap: "1rem",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  className="btn btn-danger"
+                  onClick={async () => {
+                    if (confirmAction) {
+                      await confirmAction();
+                    }
+                    setShowConfirmModal(false);
+                  }}
+                >
+                  نعم، تأكيد
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowConfirmModal(false)}
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Active Users */}
       <div className="section-header">
         <h3>المستخدمون النشطون</h3>
